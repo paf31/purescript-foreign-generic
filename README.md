@@ -2,5 +2,5 @@
 
 Generic deriving for `purescript-foreign`.
 
-- [Module Documentation](docs/Data/Foreign/Generic.purs)
+- [Module Documentation](docs/Data/Foreign/Generic.md)
 - [Example](test/Main.purs)
