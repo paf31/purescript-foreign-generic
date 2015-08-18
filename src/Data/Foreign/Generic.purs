@@ -26,6 +26,7 @@ readGeneric = map (fromJust <<< fromSpine) <<< go (toSignature (anyProxy :: Prox
   go SigNumber f = map SNumber (readNumber f)
   go SigInt f = map SInt (readInt f)
   go SigString f = map SString (readString f)
+  go SigBoolean f = map SBoolean (readBoolean f)
   go (SigArray el) f = do arr <- readArray f
                           els <- for arr \f -> do
                             e <- go (el unit) f

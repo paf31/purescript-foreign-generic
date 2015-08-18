@@ -21,13 +21,13 @@ json = """
         {
             "tag": "Leaf",
             "values": [
-                1
+                true
             ]
         },
         {
             "tag": "Leaf",
             "values": [
-                2
+                false
             ]
         }
     ]
@@ -39,6 +39,6 @@ readTree :: forall a. (Generic a) => String -> F (Tree a)
 readTree = readJSONGeneric
 
 main = do
-  case readTree json :: F (Tree Int) of
+  case readTree json :: F (Tree Boolean) of
     Right tree -> log (gShow tree)
     Left err -> print err
