@@ -2,7 +2,6 @@ module Test.Main where
 
 import Prelude
 
-import Data.Maybe
 import Data.Either
 import Data.Generic
 import Data.Foreign

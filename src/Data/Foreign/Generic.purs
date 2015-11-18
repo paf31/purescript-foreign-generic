@@ -22,6 +22,8 @@ import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 
 import Global.Unsafe (unsafeStringify)
 
+import Type.Proxy (Proxy(..))
+
 type Options =
   { sumEncoding :: SumEncoding
   , unwrapNewtypes :: Boolean
@@ -49,7 +51,7 @@ defaultOptions =
 -- | Read a value which has a `Generic` type.
 readGeneric :: forall a. (Generic a) => Options -> Foreign -> F a
 readGeneric { sumEncoding, unwrapNewtypes, unwrapSingleArgumentConstructors, maybeAsNull } =
-  map fromSpineUnsafe <<< go (toSignature (anyProxy :: Proxy a))
+  map fromSpineUnsafe <<< go (toSignature (Proxy :: Proxy a))
   where
   fromSpineUnsafe :: GenericSpine -> a
   fromSpineUnsafe sp =
