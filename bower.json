@@ -9,13 +9,18 @@
     "bower_components",
     "output"
   ],
-  "repository": {                                              
-    "type": "git",                                             
+  "repository": {
+    "type": "git",
     "url": "git://github.com/paf31/purescript-foreign-generic.git"
-  },                                                            
+  },
   "dependencies": {
     "purescript-console": "^0.1.0",
-    "purescript-foreign": "~0.7.0",
-    "purescript-generics": "^0.5.0"
+    "purescript-eff": "^0.1.2",
+    "purescript-exceptions": "~0.3.1",
+    "purescript-foreign": "~0.7.1",
+    "purescript-generics": "^0.7.0",
+    "purescript-globals": "~0.2.1",
+    "purescript-maps": "~0.5.2",
+    "purescript-nullable": "~0.2.1"
   }
 }
