@@ -28,7 +28,7 @@ type Options =
   , unwrapNewtypes :: Boolean
   , unwrapSingleArgumentConstructors :: Boolean
   , maybeAsNull :: Boolean
-  , tupleAsPair :: Boolean
+  , tupleAsArray :: Boolean
   }
 
 data SumEncoding
@@ -46,7 +46,7 @@ defaultOptions =
   , unwrapNewtypes: false
   , unwrapSingleArgumentConstructors: true
   , maybeAsNull: true
-  , tupleAsPair: false
+  , tupleAsArray: false
   }
 
 -- | Read a value which has a `Generic` type.
@@ -55,7 +55,7 @@ readGeneric { sumEncoding
             , unwrapNewtypes
             , unwrapSingleArgumentConstructors
             , maybeAsNull
-            , tupleAsPair
+            , tupleAsArray
             } = map fromSpineUnsafe <<< go (toSignature (Proxy :: Proxy a))
   where
   fromSpineUnsafe :: GenericSpine -> a
@@ -90,7 +90,7 @@ readGeneric { sumEncoding
       then return (SProd "Data.Maybe.Nothing" [])
       else do sp <- go (just unit) f
               return (SProd "Data.Maybe.Just" [\_ -> sp])
-  go (SigProd "Data.Tuple.Tuple" [{ sigValues: [_1, _2] }]) f | tupleAsPair = do
+  go (SigProd "Data.Tuple.Tuple" [{ sigValues: [_1, _2] }]) f | tupleAsArray = do
     arr <- readArray f
     case arr of
       [a, b] -> do
@@ -120,7 +120,7 @@ toForeignGeneric { sumEncoding
                  , unwrapNewtypes
                  , unwrapSingleArgumentConstructors
                  , maybeAsNull
-                 , tupleAsPair
+                 , tupleAsArray
                  } = go (toSignature (Proxy :: Proxy a)) <<< toSpine
   where
   go :: GenericSignature -> GenericSpine -> Foreign
@@ -140,7 +140,7 @@ toForeignGeneric { sumEncoding
                 | otherwise = unsafeThrow "Record fields do not match signature"
   go (SigProd "Data.Maybe.Maybe" _) (SProd "Data.Maybe.Nothing" []) | maybeAsNull = toForeign (toNullable Nothing)
   go (SigProd "Data.Maybe.Maybe" [{ sigValues: [just] }, _]) (SProd "Data.Maybe.Just" [sp]) | maybeAsNull = go (just unit) (sp unit)
-  go (SigProd "Data.Tuple.Tuple" [{ sigValues: [_1, _2] }]) (SProd "Data.Tuple.Tuple" [a, b]) | tupleAsPair = do
+  go (SigProd "Data.Tuple.Tuple" [{ sigValues: [_1, _2] }]) (SProd "Data.Tuple.Tuple" [a, b]) | tupleAsArray = do
     toForeign [ go (_1 unit) (a unit), go (_2 unit) (b unit) ]
   go (SigProd _ [{ sigConstructor: _, sigValues: [sig] }]) (SProd _ [sp]) | unwrapNewtypes = go (sig unit) (sp unit)
   go (SigProd _ alts) (SProd tag sps) =

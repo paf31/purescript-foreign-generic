@@ -26,7 +26,7 @@ tree :: Tree Int
 tree = buildTree (\i -> Tuple (2 * i) (2 * i + 1)) 5 0
 
 opts :: Options
-opts = defaultOptions { unwrapNewtypes = true, tupleAsPair = true }
+opts = defaultOptions { unwrapNewtypes = true, tupleAsArray = true }
 
 readTree :: forall a. (Generic a) => String -> F (Tree a)
 readTree = readJSONGeneric opts

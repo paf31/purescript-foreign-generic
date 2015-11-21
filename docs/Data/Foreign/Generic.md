@@ -3,7 +3,7 @@
 #### `Options`
 
 ``` purescript
-type Options = { sumEncoding :: SumEncoding, unwrapNewtypes :: Boolean, unwrapSingleArgumentConstructors :: Boolean, maybeAsNull :: Boolean, tupleAsPair :: Boolean }
+type Options = { sumEncoding :: SumEncoding, unwrapNewtypes :: Boolean, unwrapSingleArgumentConstructors :: Boolean, maybeAsNull :: Boolean, tupleAsArray :: Boolean }
 ```
 
 #### `SumEncoding`
