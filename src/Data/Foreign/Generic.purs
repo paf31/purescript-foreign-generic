@@ -7,7 +7,6 @@ import Data.Array (zipWith, zipWithA, sortBy)
 import Data.Tuple
 import Data.Either
 import Data.Foreign
-import Data.Foreign.Class
 import Data.Foreign.Index
 import Data.Function (on)
 import Data.Nullable (toNullable)
@@ -29,6 +28,7 @@ type Options =
   , unwrapNewtypes :: Boolean
   , unwrapSingleArgumentConstructors :: Boolean
   , maybeAsNull :: Boolean
+  , tupleAsPair :: Boolean
   }
 
 data SumEncoding
@@ -46,12 +46,17 @@ defaultOptions =
   , unwrapNewtypes: false
   , unwrapSingleArgumentConstructors: true
   , maybeAsNull: true
+  , tupleAsPair: false
   }
 
 -- | Read a value which has a `Generic` type.
 readGeneric :: forall a. (Generic a) => Options -> Foreign -> F a
-readGeneric { sumEncoding, unwrapNewtypes, unwrapSingleArgumentConstructors, maybeAsNull } =
-  map fromSpineUnsafe <<< go (toSignature (Proxy :: Proxy a))
+readGeneric { sumEncoding
+            , unwrapNewtypes
+            , unwrapSingleArgumentConstructors
+            , maybeAsNull
+            , tupleAsPair
+            } = map fromSpineUnsafe <<< go (toSignature (Proxy :: Proxy a))
   where
   fromSpineUnsafe :: GenericSpine -> a
   fromSpineUnsafe sp =
@@ -85,6 +90,14 @@ readGeneric { sumEncoding, unwrapNewtypes, unwrapSingleArgumentConstructors, may
       then return (SProd "Data.Maybe.Nothing" [])
       else do sp <- go (just unit) f
               return (SProd "Data.Maybe.Just" [\_ -> sp])
+  go (SigProd "Data.Tuple.Tuple" [{ sigValues: [_1, _2] }]) f | tupleAsPair = do
+    arr <- readArray f
+    case arr of
+      [a, b] -> do
+        x <- go (_1 unit) a
+        y <- go (_2 unit) b
+        return $ SProd "Data.Tuple.Tuple" [\_ -> x, \_ -> y]
+      _ -> Left (TypeMismatch "array of length 2" "array")
   go (SigProd _ alts) f =
     case sumEncoding of
       TaggedObject { tagFieldName, contentsFieldName } -> do
@@ -103,7 +116,12 @@ readGeneric { sumEncoding, unwrapNewtypes, unwrapSingleArgumentConstructors, may
 
 -- | Generate a `Foreign` value compatible with the `readGeneric` function.
 toForeignGeneric :: forall a. (Generic a) => Options -> a -> Foreign
-toForeignGeneric { sumEncoding, unwrapNewtypes, unwrapSingleArgumentConstructors, maybeAsNull } = go (toSignature (Proxy :: Proxy a)) <<< toSpine
+toForeignGeneric { sumEncoding
+                 , unwrapNewtypes
+                 , unwrapSingleArgumentConstructors
+                 , maybeAsNull
+                 , tupleAsPair
+                 } = go (toSignature (Proxy :: Proxy a)) <<< toSpine
   where
   go :: GenericSignature -> GenericSpine -> Foreign
   go _ (SNumber n)  = toForeign n
@@ -122,6 +140,8 @@ toForeignGeneric { sumEncoding, unwrapNewtypes, unwrapSingleArgumentConstructors
                 | otherwise = unsafeThrow "Record fields do not match signature"
   go (SigProd "Data.Maybe.Maybe" _) (SProd "Data.Maybe.Nothing" []) | maybeAsNull = toForeign (toNullable Nothing)
   go (SigProd "Data.Maybe.Maybe" [{ sigValues: [just] }, _]) (SProd "Data.Maybe.Just" [sp]) | maybeAsNull = go (just unit) (sp unit)
+  go (SigProd "Data.Tuple.Tuple" [{ sigValues: [_1, _2] }]) (SProd "Data.Tuple.Tuple" [a, b]) | tupleAsPair = do
+    toForeign [ go (_1 unit) (a unit), go (_2 unit) (b unit) ]
   go (SigProd _ [{ sigConstructor: _, sigValues: [sig] }]) (SProd _ [sp]) | unwrapNewtypes = go (sig unit) (sp unit)
   go (SigProd _ alts) (SProd tag sps) =
     case sumEncoding of
