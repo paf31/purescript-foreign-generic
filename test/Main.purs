@@ -8,6 +8,7 @@ import Data.Generic
 import Data.Foreign
 import Data.Foreign.Generic
 import Data.Bifunctor (bimap)
+import Test.Assert (assert, assert', ASSERT())
 
 import Control.Monad.Eff
 import Control.Monad.Eff.Console
@@ -34,12 +35,57 @@ readTree = readJSONGeneric opts
 writeTree :: forall a. (Generic a) => Tree a -> String
 writeTree = toJSONGeneric opts
 
-main :: forall eff. Eff (console :: CONSOLE | eff) Unit
+data WrappedArray a = WrappedArray (Array a)
+derive instance genericWrappedArray :: (Generic a) => Generic (WrappedArray a)
+
+newtype WrappedArrayN a = WrappedArrayN (Array a)
+derive instance genericWrappedArrayN :: (Generic a) => Generic (WrappedArrayN a)
+
+data TupleArray a b = TupleArray (Array (Tuple a b))
+derive instance genericTupleArray :: (Generic a, Generic b) => Generic (TupleArray a b)
+
+main :: forall eff. Eff (console :: CONSOLE, assert :: ASSERT | eff) Unit
 main = do
+  testTree
+  test "hello, world"
+  test 'c'
+  test 1
+  test 1.0
+  test false
+
+  test (Right "hi" :: Either String String)
+  test (Left "hi" :: Either String String)
+  test (Tuple "foo" 1)
+
+  let arr = [Tuple "foo" 1, Tuple "bar" 2]
+  test arr
+  test (WrappedArray arr)
+  test (WrappedArrayN arr)
+  test (TupleArray arr)
+
+testTree = do
   let json = writeTree tree
   log json
   case readTree json of
     Right tree1 -> do
       log (gShow tree1)
-      print (gEq tree tree1)
-    Left err -> print err
+      assert (gEq tree tree1)
+    Left err ->
+      throw (show err)
+
+test :: forall a. (Generic a) => a -> _
+test thing = do
+  log ""
+  log ("testing: " <> gShow thing)
+  log "==="
+  log ""
+  let json = toJSONGeneric defaultOptions thing
+  log json
+  case readJSONGeneric defaultOptions json :: F a of
+    Right thing1 -> do
+      log ("result: " <> gShow thing1)
+      assert (gEq thing thing1)
+    Left err ->
+      throw (show err)
+
+throw = flip assert' false

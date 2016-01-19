@@ -22,5 +22,8 @@
     "purescript-globals": "~0.2.1",
     "purescript-maps": "~0.5.2",
     "purescript-nullable": "~0.2.1"
+  },
+  "devDependencies": {
+    "purescript-assert": "~0.1.1"
   }
 }
