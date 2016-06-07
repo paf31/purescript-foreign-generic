@@ -2,16 +2,15 @@ module Test.Main where
 
 import Prelude
 
-import Data.Tuple
-import Data.Either
-import Data.Generic
-import Data.Foreign
-import Data.Foreign.Generic
+import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Console (CONSOLE, log)
 import Data.Bifunctor (bimap)
+import Data.Either (Either(..))
+import Data.Foreign (F)
+import Data.Foreign.Generic (Options, defaultOptions, readJSONGeneric, toJSONGeneric)
+import Data.Generic (class Generic, gEq, gShow)
+import Data.Tuple (Tuple(..))
 import Test.Assert (assert, assert', ASSERT())
-
-import Control.Monad.Eff
-import Control.Monad.Eff.Console
 
 -- | Balanced binary leaf trees
 data Tree a = Leaf a | Branch (Tree (Tuple a a))
@@ -63,6 +62,12 @@ main = do
   test (WrappedArrayN arr)
   test (TupleArray arr)
 
+testTree
+  :: forall eff
+   . Eff ( console :: CONSOLE
+         , assert :: ASSERT
+         | eff
+         ) Unit
 testTree = do
   let json = writeTree tree
   log json
@@ -73,7 +78,14 @@ testTree = do
     Left err ->
       throw (show err)
 
-test :: forall a. (Generic a) => a -> _
+test
+  :: forall a eff
+   . Generic a
+  => a
+  -> Eff ( console :: CONSOLE
+         , assert :: ASSERT
+         | eff
+         ) Unit
 test thing = do
   log ""
   log ("testing: " <> gShow thing)
@@ -88,4 +100,5 @@ test thing = do
     Left err ->
       throw (show err)
 
+throw :: forall eff. String -> Eff (assert :: ASSERT | eff) Unit
 throw = flip assert' false

@@ -22,7 +22,7 @@ defaultOptions :: Options
 #### `readGeneric`
 
 ``` purescript
-readGeneric :: forall a. (Generic a) => Options -> Foreign -> F a
+readGeneric :: forall a. Generic a => Options -> Foreign -> F a
 ```
 
 Read a value which has a `Generic` type.
@@ -30,7 +30,7 @@ Read a value which has a `Generic` type.
 #### `toForeignGeneric`
 
 ``` purescript
-toForeignGeneric :: forall a. (Generic a) => Options -> a -> Foreign
+toForeignGeneric :: forall a. Generic a => Options -> a -> Foreign
 ```
 
 Generate a `Foreign` value compatible with the `readGeneric` function.
@@ -38,7 +38,7 @@ Generate a `Foreign` value compatible with the `readGeneric` function.
 #### `readJSONGeneric`
 
 ``` purescript
-readJSONGeneric :: forall a. (Generic a) => Options -> String -> F a
+readJSONGeneric :: forall a. Generic a => Options -> String -> F a
 ```
 
 Read a value which has a `Generic` type from a JSON String
@@ -46,7 +46,7 @@ Read a value which has a `Generic` type from a JSON String
 #### `toJSONGeneric`
 
 ``` purescript
-toJSONGeneric :: forall a. (Generic a) => Options -> a -> String
+toJSONGeneric :: forall a. Generic a => Options -> a -> String
 ```
 
 Write a value which has a `Generic` type as a JSON String
