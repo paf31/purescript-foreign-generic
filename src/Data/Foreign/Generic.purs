@@ -10,7 +10,7 @@ import Data.Foldable (find)
 import Data.Foreign (F, Foreign, ForeignError(..), parseJSON, toForeign, readArray,
                      readString, isUndefined, isNull, readBoolean, readChar, readInt,
                      readNumber)
-import Data.Foreign.Index (prop, (!))
+import Data.Foreign.Index (prop, (!), errorAt)
 import Data.Function (on)
 import Data.Generic (class Generic, GenericSignature(..), GenericSpine(..), toSpine,
                      toSignature, fromSpine)
@@ -80,8 +80,10 @@ readGeneric { sumEncoding
   go (SigRecord props) f = do
     fs <- for props \prop -> do
       pf <- f ! prop.recLabel
-      sp <- go (prop.recValue unit) pf
-      pure { recLabel: prop.recLabel, recValue: const sp }
+      case go (prop.recValue unit) pf of
+        Right sp -> pure { recLabel: prop.recLabel, recValue: const sp }
+        Left err -> Left $ errorAt prop.recLabel err
+
     pure (SRecord fs)
   go (SigProd _ [{ sigConstructor: tag, sigValues: [sig] }]) f | unwrapNewtypes = do
     sp <- go (sig unit) f
