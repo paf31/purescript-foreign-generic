@@ -24,6 +24,7 @@
     "purescript-nullable": "^1.0.0"
   },
   "devDependencies": {
-    "purescript-assert": "^1.0.0"
+    "purescript-assert": "^1.0.0",
+    "purescript-strings": "^1.0.0"
   }
 }
