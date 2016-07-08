@@ -109,18 +109,18 @@ readGeneric { sumEncoding
         x <- go (_1 unit) a
         y <- go (_2 unit) b
         pure $ SProd "Data.Tuple.Tuple" [\_ -> x, \_ -> y]
-      _ -> Left (TypeMismatch "array of length 2" "array")
+      _ -> Left (TypeMismatch ["array of length 2"] "array")
   go (SigProd _ alts) f | untagEnums && all (\a -> length a.sigValues == 0) alts = do
     tag <- readString f
     case find (\alt -> (constructorTagModifier alt.sigConstructor) == tag) alts of
-      Nothing -> Left (TypeMismatch ("one of " <> show (map (constructorTagModifier <<< _.sigConstructor ) alts)) tag)
+      Nothing -> Left (TypeMismatch (map (constructorTagModifier <<< _.sigConstructor) alts) tag)
       Just { sigConstructor } -> pure (SProd sigConstructor [])
   go (SigProd _ alts) f =
     case sumEncoding of
       TaggedObject { tagFieldName, contentsFieldName } -> do
         tag <- prop tagFieldName f >>= readString
-        case find (\alt -> (constructorTagModifier alt.sigConstructor) == tag) alts of
-          Nothing -> Left (TypeMismatch ("one of " <> show (map (constructorTagModifier <<< _.sigConstructor ) alts)) tag)
+        case find (\alt -> constructorTagModifier alt.sigConstructor == tag) alts of
+          Nothing -> Left (TypeMismatch (map (constructorTagModifier <<< _.sigConstructor) alts) tag)
           Just { sigConstructor, sigValues: [] } -> pure (SProd sigConstructor [])
           Just { sigConstructor, sigValues: [sig] } | unwrapSingleArgumentConstructors -> do
             val <- prop contentsFieldName f
@@ -166,13 +166,11 @@ toForeignGeneric { sumEncoding
   go (SigProd _ alts) (SProd tag sps) | untagEnums && all (\a -> length a.sigValues == 0) alts =
     toForeign (constructorTagModifier tag)
   go (SigProd _ alts) (SProd tag sps) =
-    let ctag = constructorTagModifier tag
-    in
-     case sumEncoding of
-       TaggedObject { tagFieldName, contentsFieldName } ->
-         case find (\alt -> alt.sigConstructor == tag) alts of
-           Nothing -> unsafeThrow ("No signature for data constructor " <> tag)
-           Just { sigValues } ->
+    case sumEncoding of
+      TaggedObject { tagFieldName, contentsFieldName } ->
+        case find (\alt -> alt.sigConstructor == tag) alts of
+          Nothing -> unsafeThrow ("No signature for data constructor " <> tag)
+          Just { sigValues } ->
              case zipWith (\sig sp -> go (sig unit) (sp unit)) sigValues sps of
                [] -> toForeign (S.fromList (L.singleton (Tuple tagFieldName (toForeign ctag))))
                [f] | unwrapSingleArgumentConstructors ->
@@ -182,6 +180,8 @@ toForeignGeneric { sumEncoding
                fs -> toForeign (S.fromList (L.fromFoldable [ Tuple tagFieldName (toForeign ctag)
                                                            , Tuple contentsFieldName (toForeign fs)
                                                            ]))
+    where
+      ctag = constructorTagModifier tag
   go _ _ = unsafeThrow "Invalid spine for signature"
 
 -- | Read a value which has a `Generic` type from a JSON String

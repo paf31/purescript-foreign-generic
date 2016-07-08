@@ -60,43 +60,43 @@ shortNames s =
 
 camelTo :: String -> String -> String
 camelTo to str =
-  toLower (replace rx "_$1" str)
+  toLower (replace rx (to <> "$1") str)
   where
     rx = unsafePartial (fromRight (regex "([A-Z]+)" opts))
     opts = noFlags { global = true }
 
 main :: forall eff. Eff (console :: CONSOLE, assert :: ASSERT | eff) Unit
 main = do
-  test defaultOptions
-  test defaultOptions { untagEnums = true, constructorTagModifier = shortNames }
-  test defaultOptions { untagEnums = true, fieldLabelModifier = camelTo "_" }
+  testOpts defaultOptions
+  testOpts defaultOptions { untagEnums = true, constructorTagModifier = shortNames }
+  testOpts defaultOptions { untagEnums = true, fieldLabelModifier = camelTo "_" }
 
-test :: forall eff. Options -> Eff (console :: CONSOLE, assert :: ASSERT | eff) Unit
-test opts = do
+testOpts :: forall eff. Options -> Eff (console :: CONSOLE, assert :: ASSERT | eff) Unit
+testOpts opts = do
   testTree opts
-  test "hello, world"
-  test 'c'
-  test 1
-  test 1.0
-  test false
-  test GT
+  test' "hello, world"
+  test' 'c'
+  test' 1
+  test' 1.0
+  test' false
+  test' GT
 
-  test (Right "hi" :: Either String String)
-  test (Left "hi" :: Either String String)
-  test (Tuple "fooBar" 1)
+  test' (Right "hi" :: Either String String)
+  test' (Left "hi" :: Either String String)
+  test' (Tuple "fooBar" 1)
 
   let arr = [Tuple "fooBar" 1, Tuple "baz" 2]
-  test arr
-  test (WrappedArray arr)
-  test (WrappedArrayN arr)
-  test (TupleArray arr)
-  test (WrappedRecord { propFoo: "hi", propBAR: 3, order: GT })
+  test' arr
+  test' (WrappedArray arr)
+  test' (WrappedArrayN arr)
+  test' (TupleArray arr)
+  test' (WrappedRecord { propFoo: "hi", propBAR: 3, order: GT })
 
   where
-    test :: forall a. Generic a
-         => a
-         -> Eff ( console :: CONSOLE , assert :: ASSERT | eff) Unit
-    test = test' opts
+    test' :: forall a. Generic a
+          => a
+          -> Eff ( console :: CONSOLE , assert :: ASSERT | eff) Unit
+    test' = test opts
 
 testTree
   :: forall eff
@@ -115,7 +115,7 @@ testTree opts = do
     Left err ->
       throw (show err)
 
-test'
+test
   :: forall a eff
    . Generic a
   => Options
@@ -124,7 +124,7 @@ test'
          , assert :: ASSERT
          | eff
          ) Unit
-test' opts thing = do
+test opts thing = do
   log ""
   log ("testing: " <> gShow thing)
   log "==="
