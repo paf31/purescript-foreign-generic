@@ -9,6 +9,7 @@
     "bower_components",
     "output"
   ],
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git://github.com/paf31/purescript-foreign-generic.git"
