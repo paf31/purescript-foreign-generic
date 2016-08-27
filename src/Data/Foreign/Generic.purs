@@ -4,13 +4,13 @@ import Prelude
 
 import Control.Bind ((>=>))
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
-import Data.Array (zipWith, zipWithA, sortBy)
+import Data.Array (zipWith, zipWithA, sortBy, length)
 import Data.Either (Either(..))
-import Data.Foldable (find)
+import Data.Foldable (find, all)
 import Data.Foreign (F, Foreign, ForeignError(..), parseJSON, toForeign, readArray,
                      readString, isUndefined, isNull, readBoolean, readChar, readInt,
                      readNumber)
-import Data.Foreign.Index (prop, (!))
+import Data.Foreign.Index (prop, (!), errorAt)
 import Data.Function (on)
 import Data.Generic (class Generic, GenericSignature(..), GenericSpine(..), toSpine,
                      toSignature, fromSpine)
@@ -29,6 +29,9 @@ type Options =
   , unwrapSingleArgumentConstructors :: Boolean
   , maybeAsNull :: Boolean
   , tupleAsArray :: Boolean
+  , untagEnums :: Boolean
+  , fieldLabelModifier :: String -> String
+  , constructorTagModifier :: String -> String
   }
 
 data SumEncoding
@@ -47,6 +50,9 @@ defaultOptions =
   , unwrapSingleArgumentConstructors: true
   , maybeAsNull: true
   , tupleAsArray: false
+  , untagEnums: false
+  , fieldLabelModifier: id
+  , constructorTagModifier: id
   }
 
 -- | Read a value which has a `Generic` type.
@@ -56,6 +62,9 @@ readGeneric { sumEncoding
             , unwrapSingleArgumentConstructors
             , maybeAsNull
             , tupleAsArray
+            , untagEnums
+            , fieldLabelModifier
+            , constructorTagModifier
             } = map fromSpineUnsafe <<< go (toSignature (Proxy :: Proxy a))
   where
   fromSpineUnsafe :: GenericSpine -> a
@@ -79,9 +88,11 @@ readGeneric { sumEncoding
     pure (SArray els)
   go (SigRecord props) f = do
     fs <- for props \prop -> do
-      pf <- f ! prop.recLabel
-      sp <- go (prop.recValue unit) pf
-      pure { recLabel: prop.recLabel, recValue: const sp }
+      let label = fieldLabelModifier prop.recLabel
+      pf <- f ! label
+      case go (prop.recValue unit) pf of
+        Right sp -> pure { recLabel: label, recValue: const sp }
+        Left err -> Left $ errorAt label err
     pure (SRecord fs)
   go (SigProd _ [{ sigConstructor: tag, sigValues: [sig] }]) f | unwrapNewtypes = do
     sp <- go (sig unit) f
@@ -98,22 +109,27 @@ readGeneric { sumEncoding
         x <- go (_1 unit) a
         y <- go (_2 unit) b
         pure $ SProd "Data.Tuple.Tuple" [\_ -> x, \_ -> y]
-      _ -> Left (TypeMismatch "array of length 2" "array")
+      _ -> Left (TypeMismatch ["array of length 2"] "array")
+  go (SigProd _ alts) f | untagEnums && all (\a -> length a.sigValues == 0) alts = do
+    tag <- readString f
+    case find (\alt -> (constructorTagModifier alt.sigConstructor) == tag) alts of
+      Nothing -> Left (TypeMismatch (map (constructorTagModifier <<< _.sigConstructor) alts) tag)
+      Just { sigConstructor } -> pure (SProd sigConstructor [])
   go (SigProd _ alts) f =
     case sumEncoding of
       TaggedObject { tagFieldName, contentsFieldName } -> do
         tag <- prop tagFieldName f >>= readString
-        case find (\alt -> alt.sigConstructor == tag) alts of
-          Nothing -> Left (TypeMismatch ("one of " <> show (map _.sigConstructor alts)) tag)
-          Just { sigValues: [] } -> pure (SProd tag [])
-          Just { sigValues: [sig] } | unwrapSingleArgumentConstructors -> do
+        case find (\alt -> constructorTagModifier alt.sigConstructor == tag) alts of
+          Nothing -> Left (TypeMismatch (map (constructorTagModifier <<< _.sigConstructor) alts) tag)
+          Just { sigConstructor, sigValues: [] } -> pure (SProd sigConstructor [])
+          Just { sigConstructor, sigValues: [sig] } | unwrapSingleArgumentConstructors -> do
             val <- prop contentsFieldName f
             sp <- go (sig unit) val
-            pure (SProd tag [\_ -> sp])
-          Just { sigValues } -> do
+            pure (SProd sigConstructor [\_ -> sp])
+          Just { sigConstructor, sigValues } -> do
             vals <- prop contentsFieldName f >>= readArray
             sps <- zipWithA (\k -> go (k unit)) sigValues vals
-            pure (SProd tag (map const sps))
+            pure (SProd sigConstructor (map const sps))
 
 -- | Generate a `Foreign` value compatible with the `readGeneric` function.
 toForeignGeneric :: forall a. (Generic a) => Options -> a -> Foreign
@@ -122,6 +138,9 @@ toForeignGeneric { sumEncoding
                  , unwrapSingleArgumentConstructors
                  , maybeAsNull
                  , tupleAsArray
+                 , untagEnums
+                 , fieldLabelModifier
+                 , constructorTagModifier
                  } = go (toSignature (Proxy :: Proxy a)) <<< toSpine
   where
   go :: GenericSignature -> GenericSpine -> Foreign
@@ -137,28 +156,32 @@ toForeignGeneric { sumEncoding
     pairs = zipWith pair (sortBy (compare `on` _.recLabel) sigs)
                          (sortBy (compare `on` _.recLabel) sps)
 
-    pair sig sp | sig.recLabel == sp.recLabel = Tuple sig.recLabel (go (sig.recValue unit) (sp.recValue unit))
+    pair sig sp | sig.recLabel == sp.recLabel = Tuple (fieldLabelModifier sig.recLabel) (go (sig.recValue unit) (sp.recValue unit))
                 | otherwise = unsafeThrow "Record fields do not match signature"
   go (SigProd "Data.Maybe.Maybe" _) (SProd "Data.Maybe.Nothing" []) | maybeAsNull = toForeign (toNullable Nothing)
   go (SigProd "Data.Maybe.Maybe" [{ sigValues: [just] }, _]) (SProd "Data.Maybe.Just" [sp]) | maybeAsNull = go (just unit) (sp unit)
   go (SigProd "Data.Tuple.Tuple" [{ sigValues: [_1, _2] }]) (SProd "Data.Tuple.Tuple" [a, b]) | tupleAsArray = do
     toForeign [ go (_1 unit) (a unit), go (_2 unit) (b unit) ]
   go (SigProd _ [{ sigConstructor: _, sigValues: [sig] }]) (SProd _ [sp]) | unwrapNewtypes = go (sig unit) (sp unit)
+  go (SigProd _ alts) (SProd tag sps) | untagEnums && all (\a -> length a.sigValues == 0) alts =
+    toForeign (constructorTagModifier tag)
   go (SigProd _ alts) (SProd tag sps) =
     case sumEncoding of
       TaggedObject { tagFieldName, contentsFieldName } ->
         case find (\alt -> alt.sigConstructor == tag) alts of
           Nothing -> unsafeThrow ("No signature for data constructor " <> tag)
           Just { sigValues } ->
-            case zipWith (\sig sp -> go (sig unit) (sp unit)) sigValues sps of
-              [] -> toForeign (S.fromList (L.singleton (Tuple tagFieldName (toForeign tag))))
-              [f] | unwrapSingleArgumentConstructors ->
-                    toForeign (S.fromList (L.fromFoldable [ Tuple tagFieldName (toForeign tag)
-                                                          , Tuple contentsFieldName f
-                                                          ]))
-              fs -> toForeign (S.fromList (L.fromFoldable [ Tuple tagFieldName (toForeign tag)
-                                                          , Tuple contentsFieldName (toForeign fs)
-                                                          ]))
+             case zipWith (\sig sp -> go (sig unit) (sp unit)) sigValues sps of
+               [] -> toForeign (S.fromList (L.singleton (Tuple tagFieldName (toForeign ctag))))
+               [f] | unwrapSingleArgumentConstructors ->
+                 toForeign (S.fromList (L.fromFoldable [ Tuple tagFieldName (toForeign ctag)
+                                                       , Tuple contentsFieldName f
+                                                       ]))
+               fs -> toForeign (S.fromList (L.fromFoldable [ Tuple tagFieldName (toForeign ctag)
+                                                           , Tuple contentsFieldName (toForeign fs)
+                                                           ]))
+    where
+      ctag = constructorTagModifier tag
   go _ _ = unsafeThrow "Invalid spine for signature"
 
 -- | Read a value which has a `Generic` type from a JSON String
