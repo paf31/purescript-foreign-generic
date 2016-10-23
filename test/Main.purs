@@ -1,16 +1,16 @@
 module Test.Main where
 
 import Prelude
-
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
+import Control.Monad.Except (runExcept)
 import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
 import Data.Foreign (F)
 import Data.Foreign.Generic (Options, defaultOptions, readJSONGeneric, toJSONGeneric)
 import Data.Generic (class Generic, gEq, gShow)
 import Data.Tuple (Tuple(..))
-import Test.Assert (assert, assert', ASSERT())
+import Test.Assert (assert, assert', ASSERT)
 
 -- | Balanced binary leaf trees
 data Tree a = Leaf a | Branch (Tree (Tuple a a))
@@ -71,7 +71,7 @@ testTree
 testTree = do
   let json = writeTree tree
   log json
-  case readTree json of
+  case runExcept (readTree json) of
     Right tree1 -> do
       log (gShow tree1)
       assert (gEq tree tree1)
@@ -93,7 +93,7 @@ test thing = do
   log ""
   let json = toJSONGeneric defaultOptions thing
   log json
-  case readJSONGeneric defaultOptions json :: F a of
+  case runExcept (readJSONGeneric defaultOptions json :: F a) of
     Right thing1 -> do
       log ("result: " <> gShow thing1)
       assert (gEq thing thing1)

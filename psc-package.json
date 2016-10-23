@@ -1,0 +1,15 @@
+{
+    "name": "foreign-generic",
+    "source": "https://github.com/purescript/package-sets.git",
+    "set": "psc-0.10.1",
+    "depends": [
+      "console",
+      "eff",
+      "exceptions",
+      "foreign",
+      "generics",
+      "globals",
+      "maps",
+      "nullable"
+    ]
+}

@@ -2,19 +2,15 @@ module Data.Foreign.Generic where
 
 import Prelude
 
-import Control.Bind ((>=>))
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 import Data.Array (zipWith, zipWithA, sortBy)
-import Data.Either (Either(..))
 import Data.Foldable (find)
-import Data.Foreign (F, Foreign, ForeignError(..), parseJSON, toForeign, readArray,
-                     readString, isUndefined, isNull, readBoolean, readChar, readInt,
-                     readNumber)
+import Data.Foreign (F, Foreign, ForeignError(..), fail, parseJSON, toForeign,
+                     readArray, readString, isUndefined, isNull, readBoolean,
+                     readChar, readInt, readNumber)
 import Data.Foreign.Index (prop, (!))
 import Data.Function (on)
-import Data.Generic (class Generic, GenericSignature(..), GenericSpine(..), toSpine,
-                     toSignature, fromSpine)
-import Data.List as L
+import Data.Generic (class Generic, GenericSignature(..), GenericSpine(..), toSpine, toSignature, fromSpine)
 import Data.Maybe (Maybe(..))
 import Data.Nullable (toNullable)
 import Data.StrMap as S
@@ -98,13 +94,13 @@ readGeneric { sumEncoding
         x <- go (_1 unit) a
         y <- go (_2 unit) b
         pure $ SProd "Data.Tuple.Tuple" [\_ -> x, \_ -> y]
-      _ -> Left (TypeMismatch "array of length 2" "array")
+      _ -> fail (TypeMismatch "array of length 2" "array")
   go (SigProd _ alts) f =
     case sumEncoding of
       TaggedObject { tagFieldName, contentsFieldName } -> do
         tag <- prop tagFieldName f >>= readString
         case find (\alt -> alt.sigConstructor == tag) alts of
-          Nothing -> Left (TypeMismatch ("one of " <> show (map _.sigConstructor alts)) tag)
+          Nothing -> fail (TypeMismatch ("one of " <> show (map _.sigConstructor alts)) tag)
           Just { sigValues: [] } -> pure (SProd tag [])
           Just { sigValues: [sig] } | unwrapSingleArgumentConstructors -> do
             val <- prop contentsFieldName f
@@ -131,7 +127,7 @@ toForeignGeneric { sumEncoding
   go _ (SString s)  = toForeign s
   go _ (SBoolean b) = toForeign b
   go (SigArray sig) (SArray arr) = toForeign (map (go (sig unit) <<< (_ $ unit)) arr)
-  go (SigRecord sigs) (SRecord sps) = toForeign (S.fromList (L.fromFoldable pairs))
+  go (SigRecord sigs) (SRecord sps) = toForeign (S.fromFoldable pairs)
     where
     pairs :: Array (Tuple String Foreign)
     pairs = zipWith pair (sortBy (compare `on` _.recLabel) sigs)
@@ -151,14 +147,14 @@ toForeignGeneric { sumEncoding
           Nothing -> unsafeThrow ("No signature for data constructor " <> tag)
           Just { sigValues } ->
             case zipWith (\sig sp -> go (sig unit) (sp unit)) sigValues sps of
-              [] -> toForeign (S.fromList (L.singleton (Tuple tagFieldName (toForeign tag))))
+              [] -> toForeign (S.singleton tagFieldName (toForeign tag))
               [f] | unwrapSingleArgumentConstructors ->
-                    toForeign (S.fromList (L.fromFoldable [ Tuple tagFieldName (toForeign tag)
-                                                          , Tuple contentsFieldName f
-                                                          ]))
-              fs -> toForeign (S.fromList (L.fromFoldable [ Tuple tagFieldName (toForeign tag)
-                                                          , Tuple contentsFieldName (toForeign fs)
-                                                          ]))
+                    toForeign (S.fromFoldable [ Tuple tagFieldName (toForeign tag)
+                                              , Tuple contentsFieldName f
+                                              ])
+              fs -> toForeign (S.fromFoldable [ Tuple tagFieldName (toForeign tag)
+                                              , Tuple contentsFieldName (toForeign fs)
+                                                        ])
   go _ _ = unsafeThrow "Invalid spine for signature"
 
 -- | Read a value which has a `Generic` type from a JSON String
