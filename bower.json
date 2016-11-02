@@ -23,7 +23,7 @@
     "purescript-globals": "^2.0.0",
     "purescript-maps": "^2.0.0",
     "purescript-nullable": "^2.0.0",
-    "purescript-symbols": "^1.0.1"
+    "purescript-symbols": "^2.0.0"
   },
   "devDependencies": {
     "purescript-assert": "^2.0.0"
