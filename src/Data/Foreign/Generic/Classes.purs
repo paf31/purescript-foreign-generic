@@ -171,8 +171,8 @@ instance genericDecodeFieldsField
   => GenericDecodeFields (Field name a) where
   decodeFields x = do
     let name = reflectSymbol (SProxy :: SProxy name)
-    y <- readProp name x
-    Field <$> read y
+    -- If `name` field doesn't exist, then `y` will be `undefined`.
+    Field <$> readProp name x
 
 instance genericEncodeFieldsField
   :: (IsSymbol name, AsForeign a)
