@@ -19,11 +19,11 @@
     "purescript-eff": "^2.0.0",
     "purescript-exceptions": "^2.0.0",
     "purescript-foreign": "^3.0.0",
-    "purescript-generics": "^3.0.0",
+    "purescript-generics-rep": "^4.0.0",
     "purescript-globals": "^2.0.0",
     "purescript-maps": "^2.0.0",
     "purescript-nullable": "^2.0.0",
-    "purescript-symbols": "^1.0.1"
+    "purescript-symbols": "^2.0.0"
   },
   "devDependencies": {
     "purescript-assert": "^2.0.0"
