@@ -6,3 +6,4 @@ Generic deriving for `purescript-foreign`.
 
 - [Module Documentation](docs/Data/Foreign/Generic.md)
 - [Example](test/Main.purs)
+- [Further examples in this repo](https://github.com/justinwoo/purescript-howto-foreign-generic)
