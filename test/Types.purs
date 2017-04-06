@@ -3,7 +3,7 @@ module Test.Types where
 import Prelude
 import Data.Bifunctor (class Bifunctor)
 import Data.Foreign (ForeignError(ForeignError), fail, readArray, toForeign)
-import Data.Foreign.Generic.Classes (class AsForeign, class IsForeign, read, write)
+import Data.Foreign.Generic.Classes (class Encode, class Decode, read, write)
 import Data.Foreign.Generic (defaultOptions, readGeneric, toForeignGeneric)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
@@ -22,14 +22,14 @@ instance showTupleArray :: (Show a, Show b) => Show (TupleArray a b) where
 instance eqTupleArray :: (Eq a, Eq b) => Eq (TupleArray a b) where
   eq x y = genericEq x y
 
-instance isForeignTupleArray :: (IsForeign a, IsForeign b) => IsForeign (TupleArray a b) where
+instance decodeTupleArray :: (Decode a, Decode b) => Decode (TupleArray a b) where
   read x = do
     arr <- readArray x
     case arr of
       [y, z] -> TupleArray <$> (Tuple <$> read y <*> read z)
       _ -> fail (ForeignError "Expected two array elements")
 
-instance asForeignTupleArray :: (AsForeign a, AsForeign b) => AsForeign (TupleArray a b) where
+instance encodeTupleArray :: (Encode a, Encode b) => Encode (TupleArray a b) where
   write (TupleArray (Tuple a b)) = toForeign [write a, write b]
 
 -- | An example record
@@ -47,10 +47,10 @@ instance showRecordTest :: Show RecordTest where
 instance eqRecordTest :: Eq RecordTest where
   eq x y = genericEq x y
 
-instance isForeignRecordTest :: IsForeign RecordTest where
+instance decodeRecordTest :: Decode RecordTest where
   read x = readGeneric (defaultOptions { unwrapSingleConstructors = true }) x
 
-instance asForeignRecordTest :: AsForeign RecordTest where
+instance encodeRecordTest :: Encode RecordTest where
   write x = toForeignGeneric (defaultOptions { unwrapSingleConstructors = true }) x
 
 -- | An example of an ADT with nullary constructors
@@ -64,10 +64,10 @@ instance showIntList :: Show IntList where
 instance eqIntList :: Eq IntList where
   eq x y = genericEq x y
 
-instance isForeignIntList :: IsForeign IntList where
+instance decodeIntList :: Decode IntList where
   read x = readGeneric (defaultOptions { unwrapSingleConstructors = true }) x
 
-instance asForeignIntList :: AsForeign IntList where
+instance encodeIntList :: Encode IntList where
   write x = toForeignGeneric (defaultOptions { unwrapSingleConstructors = true }) x
 
 -- | Balanced binary leaf trees
@@ -81,8 +81,8 @@ instance showTree :: Show a => Show (Tree a) where
 instance eqTree :: Eq a => Eq (Tree a) where
   eq x y = genericEq x y
 
-instance isForeignTree :: IsForeign a => IsForeign (Tree a) where
+instance decodeTree :: Decode a => Decode (Tree a) where
   read x = readGeneric defaultOptions x
 
-instance asForeignTree :: AsForeign a => AsForeign (Tree a) where
+instance encodeTree :: Encode a => Encode (Tree a) where
   write x = toForeignGeneric defaultOptions x

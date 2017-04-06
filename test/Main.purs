@@ -7,7 +7,7 @@ import Control.Monad.Except (runExcept)
 import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
 import Data.Foreign.Generic (parseJSON)
-import Data.Foreign.Generic.Classes (class AsForeign, class IsForeign, read, write)
+import Data.Foreign.Generic.Classes (class Encode, class Decode, read, write)
 import Data.Tuple (Tuple(..))
 import Global.Unsafe (unsafeStringify)
 import Test.Assert (assert, assert', ASSERT)
@@ -27,8 +27,8 @@ throw = flip assert' false
 testRoundTrip
   :: ∀ a eff
    . Eq a
-  => IsForeign a
-  => AsForeign a
+  => Decode a
+  => Encode a
   => a
   -> Eff ( console :: CONSOLE
          , assert :: ASSERT

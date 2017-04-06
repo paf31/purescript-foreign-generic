@@ -1,5 +1,41 @@
 ## Module Data.Foreign.Generic.Classes
 
+#### `Decode`
+
+``` purescript
+class Decode a  where
+  read :: Foreign -> F a
+```
+
+##### Instances
+``` purescript
+Decode Foreign
+Decode String
+Decode Char
+Decode Boolean
+Decode Number
+Decode Int
+(Decode a) => Decode (Array a)
+```
+
+#### `Encode`
+
+``` purescript
+class Encode a  where
+  write :: a -> Foreign
+```
+
+##### Instances
+``` purescript
+Encode Foreign
+Encode String
+Encode Char
+Encode Boolean
+Encode Number
+Encode Int
+(Encode a) => Encode (Array a)
+```
+
 #### `GenericDecode`
 
 ``` purescript
@@ -38,7 +74,7 @@ class GenericDecodeArgs a  where
 ##### Instances
 ``` purescript
 GenericDecodeArgs NoArguments
-(IsForeign a) => GenericDecodeArgs (Argument a)
+(Decode a) => GenericDecodeArgs (Argument a)
 (GenericDecodeArgs a, GenericDecodeArgs b) => GenericDecodeArgs (Product a b)
 (GenericDecodeFields fields) => GenericDecodeArgs (Rec fields)
 ```
@@ -53,7 +89,7 @@ class GenericEncodeArgs a  where
 ##### Instances
 ``` purescript
 GenericEncodeArgs NoArguments
-(AsForeign a) => GenericEncodeArgs (Argument a)
+(Encode a) => GenericEncodeArgs (Argument a)
 (GenericEncodeArgs a, GenericEncodeArgs b) => GenericEncodeArgs (Product a b)
 (GenericEncodeFields fields) => GenericEncodeArgs (Rec fields)
 ```
@@ -67,7 +103,7 @@ class GenericDecodeFields a  where
 
 ##### Instances
 ``` purescript
-(IsSymbol name, IsForeign a) => GenericDecodeFields (Field name a)
+(IsSymbol name, Decode a) => GenericDecodeFields (Field name a)
 (GenericDecodeFields a, GenericDecodeFields b) => GenericDecodeFields (Product a b)
 ```
 
@@ -80,7 +116,7 @@ class GenericEncodeFields a  where
 
 ##### Instances
 ``` purescript
-(IsSymbol name, AsForeign a) => GenericEncodeFields (Field name a)
+(IsSymbol name, Encode a) => GenericEncodeFields (Field name a)
 (GenericEncodeFields a, GenericEncodeFields b) => GenericEncodeFields (Product a b)
 ```
 

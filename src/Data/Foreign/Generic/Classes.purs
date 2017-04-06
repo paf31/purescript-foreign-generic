@@ -18,28 +18,28 @@ import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Data.Traversable (sequence)
 import Type.Proxy (Proxy(..))
 
-class IsForeign a where
+class Decode a where
   read :: Foreign -> F a
 
-instance foreignIsForeign :: IsForeign Foreign where
+instance foreignDecode :: Decode Foreign where
   read = pure
 
-instance stringIsForeign :: IsForeign String where
+instance stringDecode :: Decode String where
   read = readString
 
-instance charIsForeign :: IsForeign Char where
+instance charDecode :: Decode Char where
   read = readChar
 
-instance booleanIsForeign :: IsForeign Boolean where
+instance booleanDecode :: Decode Boolean where
   read = readBoolean
 
-instance numberIsForeign :: IsForeign Number where
+instance numberDecode :: Decode Number where
   read = readNumber
 
-instance intIsForeign :: IsForeign Int where
+instance intDecode :: Decode Int where
   read = readInt
 
-instance arrayIsForeign :: IsForeign a => IsForeign (Array a) where
+instance arrayDecode :: Decode a => Decode (Array a) where
   read = readArray >=> readElements where
     readElements :: Array Foreign -> F (Array a)
     readElements arr = sequence (zipWith readElement (0 .. length arr) arr)
@@ -47,28 +47,28 @@ instance arrayIsForeign :: IsForeign a => IsForeign (Array a) where
     readElement :: Int -> Foreign -> F a
     readElement i value = mapExcept (lmap (map (ErrorAtIndex i))) (read value)
 
-class AsForeign a where
+class Encode a where
   write :: a -> Foreign
 
-instance foreignAsForeign :: AsForeign Foreign where		
-  write = id		
-		
-instance stringAsForeign :: AsForeign String where		
-  write = toForeign		
-		
-instance charAsForeign :: AsForeign Char where		
-  write = toForeign		
-		
-instance booleanAsForeign :: AsForeign Boolean where		
-  write = toForeign		
-		
-instance numberAsForeign :: AsForeign Number where		
-  write = toForeign		
-		
-instance intAsForeign :: AsForeign Int where		
-  write = toForeign		
-		
-instance arrayAsForeign :: AsForeign a => AsForeign (Array a) where		
+instance foreignEncode :: Encode Foreign where
+  write = id
+
+instance stringEncode :: Encode String where
+  write = toForeign
+
+instance charEncode :: Encode Char where
+  write = toForeign
+
+instance booleanEncode :: Encode Boolean where
+  write = toForeign
+
+instance numberEncode :: Encode Number where
+  write = toForeign
+
+instance intEncode :: Encode Int where
+  write = toForeign
+
+instance arrayEncode :: Encode a => Encode (Array a) where
   write = toForeign <<< map write
 
 class GenericDecode a where
@@ -182,7 +182,7 @@ instance genericEncodeArgsNoArguments :: GenericEncodeArgs NoArguments where
   encodeArgs _ = mempty
 
 instance genericDecodeArgsArgument
-  :: IsForeign a
+  :: Decode a
   => GenericDecodeArgs (Argument a) where
   decodeArgs i (x : xs) = do
     a <- mapExcept (lmap (map (ErrorAtIndex i))) (read x)
@@ -190,7 +190,7 @@ instance genericDecodeArgsArgument
   decodeArgs _ _ = fail (ForeignError "Not enough constructor arguments")
 
 instance genericEncodeArgsArgument
-  :: AsForeign a
+  :: Encode a
   => GenericEncodeArgs (Argument a) where
   encodeArgs (Argument a) = singleton (write a)
 
@@ -221,7 +221,7 @@ instance genericEncodeArgsRec
   encodeArgs (Rec fs) = singleton (toForeign (encodeFields fs))
 
 instance genericDecodeFieldsField
-  :: (IsSymbol name, IsForeign a)
+  :: (IsSymbol name, Decode a)
   => GenericDecodeFields (Field name a) where
   decodeFields x = do
     let name = reflectSymbol (SProxy :: SProxy name)
@@ -229,7 +229,7 @@ instance genericDecodeFieldsField
     Field <$> (index x name >>= read)
 
 instance genericEncodeFieldsField
-  :: (IsSymbol name, AsForeign a)
+  :: (IsSymbol name, Encode a)
   => GenericEncodeFields (Field name a) where
   encodeFields (Field a) =
     let name = reflectSymbol (SProxy :: SProxy name)

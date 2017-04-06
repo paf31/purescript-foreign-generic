@@ -22,6 +22,7 @@ import Global.Unsafe (unsafeStringify)
 
 foreign import parseJSONImpl :: forall eff. EffFn1 (exception :: EXCEPTION | eff) String Foreign
 
+-- | Parse a JSON string as `Foreign` data
 parseJSON :: String -> F Foreign
 parseJSON =
   ExceptT
@@ -31,6 +32,11 @@ parseJSON =
   <<< try
   <<< runEffFn1 parseJSONImpl
 
+-- | Default decoding/encoding options:
+-- |
+-- | - Represent sum types as records with `tag` and `contents` fields
+-- | - Unwrap single arguments
+-- | - Don't unwrap single constructors
 defaultOptions :: Options
 defaultOptions =
   { sumEncoding:
