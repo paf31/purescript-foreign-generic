@@ -3,7 +3,7 @@ module Test.Types where
 import Prelude
 import Data.Bifunctor (class Bifunctor)
 import Data.Foreign (ForeignError(ForeignError), fail, readArray, toForeign)
-import Data.Foreign.Class (class AsForeign, class IsForeign, read, write)
+import Data.Foreign.Generic.Classes (class AsForeign, class IsForeign, read, write)
 import Data.Foreign.Generic (defaultOptions, readGeneric, toForeignGeneric)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)

@@ -4,18 +4,72 @@ import Prelude
 import Data.StrMap as S
 import Control.Alt ((<|>))
 import Control.Monad.Except (mapExcept)
+import Data.Array (length, zipWith, (..))
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.Foreign (F, Foreign, ForeignError(..), fail, readArray, readString, toForeign)
-import Data.Foreign.Class (class AsForeign, class IsForeign, read, readProp, write)
+import Data.Foreign (F, Foreign, ForeignError(..), fail, readArray, readBoolean, readChar, readInt, readNumber, readString, toForeign)
 import Data.Foreign.Generic.Types (Options, SumEncoding(..))
-import Data.Foreign.Index (prop)
+import Data.Foreign.Index (index)
 import Data.Generic.Rep (Argument(Argument), Constructor(Constructor), Field(Field), NoArguments(NoArguments), NoConstructors, Product(Product), Rec(Rec), Sum(Inr, Inl))
 import Data.List (List(..), fromFoldable, null, singleton, toUnfoldable, (:))
 import Data.Maybe (Maybe(..), maybe)
 import Data.Monoid (mempty)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
+import Data.Traversable (sequence)
 import Type.Proxy (Proxy(..))
+
+class IsForeign a where
+  read :: Foreign -> F a
+
+instance foreignIsForeign :: IsForeign Foreign where
+  read = pure
+
+instance stringIsForeign :: IsForeign String where
+  read = readString
+
+instance charIsForeign :: IsForeign Char where
+  read = readChar
+
+instance booleanIsForeign :: IsForeign Boolean where
+  read = readBoolean
+
+instance numberIsForeign :: IsForeign Number where
+  read = readNumber
+
+instance intIsForeign :: IsForeign Int where
+  read = readInt
+
+instance arrayIsForeign :: IsForeign a => IsForeign (Array a) where
+  read = readArray >=> readElements where
+    readElements :: Array Foreign -> F (Array a)
+    readElements arr = sequence (zipWith readElement (0 .. length arr) arr)
+
+    readElement :: Int -> Foreign -> F a
+    readElement i value = mapExcept (lmap (map (ErrorAtIndex i))) (read value)
+
+class AsForeign a where
+  write :: a -> Foreign
+
+instance foreignAsForeign :: AsForeign Foreign where		
+  write = id		
+		
+instance stringAsForeign :: AsForeign String where		
+  write = toForeign		
+		
+instance charAsForeign :: AsForeign Char where		
+  write = toForeign		
+		
+instance booleanAsForeign :: AsForeign Boolean where		
+  write = toForeign		
+		
+instance numberAsForeign :: AsForeign Number where		
+  write = toForeign		
+		
+instance intAsForeign :: AsForeign Int where		
+  write = toForeign		
+		
+instance arrayAsForeign :: AsForeign a => AsForeign (Array a) where		
+  write = toForeign <<< map write
 
 class GenericDecode a where
   decodeOpts :: Options -> Foreign -> F a
@@ -56,12 +110,12 @@ instance genericDecodeConstructor
         else case opts.sumEncoding of
                TaggedObject { tagFieldName, contentsFieldName } -> do
                  tag <- mapExcept (lmap (map (ErrorAtProperty contentsFieldName))) do
-                   tag <- prop tagFieldName f >>= readString
+                   tag <- index f tagFieldName >>= readString
                    unless (tag == ctorName) $
                      fail (ForeignError ("Expected " <> show ctorName <> " tag"))
                    pure tag
                  args <- mapExcept (lmap (map (ErrorAtProperty contentsFieldName)))
-                           (prop contentsFieldName f >>= readArguments)
+                           (index f contentsFieldName >>= readArguments)
                  pure (Constructor args)
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
@@ -172,7 +226,7 @@ instance genericDecodeFieldsField
   decodeFields x = do
     let name = reflectSymbol (SProxy :: SProxy name)
     -- If `name` field doesn't exist, then `y` will be `undefined`.
-    Field <$> readProp name x
+    Field <$> (index x name >>= read)
 
 instance genericEncodeFieldsField
   :: (IsSymbol name, AsForeign a)
