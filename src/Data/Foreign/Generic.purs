@@ -1,36 +1,21 @@
 module Data.Foreign.Generic
-  ( parseJSON
-  , defaultOptions
-  , readGeneric
-  , toForeignGeneric
-  , readJSONGeneric
-  , toJSONGeneric
+  ( defaultOptions
+  , genericDecode
+  , genericEncode
+  , decodeJSON
+  , encodeJSON
+  , genericDecodeJSON
+  , genericEncodeJSON
   ) where
 
 import Prelude
-import Control.Monad.Eff (runPure)
-import Control.Monad.Eff.Exception (EXCEPTION, message, try)
-import Control.Monad.Eff.Uncurried (EffFn1, runEffFn1)
-import Control.Monad.Except (ExceptT(..))
-import Data.Bifunctor (lmap)
-import Data.Foreign (F, Foreign, ForeignError(..))
-import Data.Foreign.Generic.Classes (class GenericDecode, class GenericEncode, decodeOpts, encodeOpts)
+import Data.Foreign (F, Foreign)
+import Data.Foreign.Class (class Decode, class Encode, decode, encode)
+import Data.Foreign.Generic.Class (class GenericDecode, class GenericEncode, decodeOpts, encodeOpts)
 import Data.Foreign.Generic.Types (Options, SumEncoding(..))
+import Data.Foreign.JSON (parseJSON, decodeJSONWith)
 import Data.Generic.Rep (class Generic, from, to)
-import Data.Identity (Identity(..))
 import Global.Unsafe (unsafeStringify)
-
-foreign import parseJSONImpl :: forall eff. EffFn1 (exception :: EXCEPTION | eff) String Foreign
-
--- | Parse a JSON string as `Foreign` data
-parseJSON :: String -> F Foreign
-parseJSON =
-  ExceptT
-  <<< Identity
-  <<< lmap (pure <<< JSONError <<< message)
-  <<< runPure
-  <<< try
-  <<< runEffFn1 parseJSONImpl
 
 -- | Default decoding/encoding options:
 -- |
@@ -49,41 +34,57 @@ defaultOptions =
   }
 
 -- | Read a value which has a `Generic` type.
-readGeneric
+genericDecode
   :: forall a rep
    . Generic a rep
   => GenericDecode rep
   => Options
   -> Foreign
   -> F a
-readGeneric opts = map to <<< decodeOpts opts
+genericDecode opts = map to <<< decodeOpts opts
 
 -- | Generate a `Foreign` value compatible with the `readGeneric` function.
-toForeignGeneric
+genericEncode
   :: forall a rep
    . Generic a rep
   => GenericEncode rep
   => Options
   -> a
   -> Foreign
-toForeignGeneric opts = encodeOpts opts <<< from
+genericEncode opts = encodeOpts opts <<< from
+
+-- | Decode a JSON string using a `Decode` instance.
+decodeJSON
+  :: forall a
+   . Decode a
+  => String
+  -> F a
+decodeJSON = decodeJSONWith decode
+
+-- | Decode a JSON string using a `Decode` instance.
+encodeJSON
+  :: forall a
+   . Encode a
+  => a
+  -> String
+encodeJSON = unsafeStringify <<< encode
 
 -- | Read a value which has a `Generic` type from a JSON String
-readJSONGeneric
+genericDecodeJSON
   :: forall a rep
    . Generic a rep
   => GenericDecode rep
   => Options
   -> String
   -> F a
-readJSONGeneric opts = parseJSON >=> readGeneric opts
+genericDecodeJSON opts = genericDecode opts <=< parseJSON
 
 -- | Write a value which has a `Generic` type as a JSON String
-toJSONGeneric
+genericEncodeJSON
   :: forall a rep
    . Generic a rep
   => GenericEncode rep
   => Options
   -> a
   -> String
-toJSONGeneric opts = toForeignGeneric opts >>> unsafeStringify
+genericEncodeJSON opts = unsafeStringify <<< genericEncode opts

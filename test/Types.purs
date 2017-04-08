@@ -3,8 +3,8 @@ module Test.Types where
 import Prelude
 import Data.Bifunctor (class Bifunctor)
 import Data.Foreign (ForeignError(ForeignError), fail, readArray, toForeign)
-import Data.Foreign.Generic.Classes (class Encode, class Decode, read, write)
-import Data.Foreign.Generic (defaultOptions, readGeneric, toForeignGeneric)
+import Data.Foreign.Class (class Encode, class Decode, encode, decode)
+import Data.Foreign.Generic (defaultOptions, genericDecode, genericEncode)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
@@ -23,14 +23,14 @@ instance eqTupleArray :: (Eq a, Eq b) => Eq (TupleArray a b) where
   eq x y = genericEq x y
 
 instance decodeTupleArray :: (Decode a, Decode b) => Decode (TupleArray a b) where
-  read x = do
+  decode x = do
     arr <- readArray x
     case arr of
-      [y, z] -> TupleArray <$> (Tuple <$> read y <*> read z)
+      [y, z] -> TupleArray <$> (Tuple <$> decode y <*> decode z)
       _ -> fail (ForeignError "Expected two array elements")
 
 instance encodeTupleArray :: (Encode a, Encode b) => Encode (TupleArray a b) where
-  write (TupleArray (Tuple a b)) = toForeign [write a, write b]
+  encode (TupleArray (Tuple a b)) = toForeign [encode a, encode b]
 
 -- | An example record
 newtype RecordTest = RecordTest
@@ -48,10 +48,10 @@ instance eqRecordTest :: Eq RecordTest where
   eq x y = genericEq x y
 
 instance decodeRecordTest :: Decode RecordTest where
-  read x = readGeneric (defaultOptions { unwrapSingleConstructors = true }) x
+  decode x = genericDecode (defaultOptions { unwrapSingleConstructors = true }) x
 
 instance encodeRecordTest :: Encode RecordTest where
-  write x = toForeignGeneric (defaultOptions { unwrapSingleConstructors = true }) x
+  encode x = genericEncode (defaultOptions { unwrapSingleConstructors = true }) x
 
 -- | An example of an ADT with nullary constructors
 data IntList = Nil | Cons Int IntList
@@ -65,10 +65,10 @@ instance eqIntList :: Eq IntList where
   eq x y = genericEq x y
 
 instance decodeIntList :: Decode IntList where
-  read x = readGeneric (defaultOptions { unwrapSingleConstructors = true }) x
+  decode x = genericDecode (defaultOptions { unwrapSingleConstructors = true }) x
 
 instance encodeIntList :: Encode IntList where
-  write x = toForeignGeneric (defaultOptions { unwrapSingleConstructors = true }) x
+  encode x = genericEncode (defaultOptions { unwrapSingleConstructors = true }) x
 
 -- | Balanced binary leaf trees
 data Tree a = Leaf a | Branch (Tree (TupleArray a a))
@@ -82,7 +82,7 @@ instance eqTree :: Eq a => Eq (Tree a) where
   eq x y = genericEq x y
 
 instance decodeTree :: Decode a => Decode (Tree a) where
-  read x = readGeneric defaultOptions x
+  decode x = genericDecode defaultOptions x
 
 instance encodeTree :: Encode a => Encode (Tree a) where
-  write x = toForeignGeneric defaultOptions x
+  encode x = genericEncode defaultOptions x

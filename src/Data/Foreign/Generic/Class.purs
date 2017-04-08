@@ -1,75 +1,21 @@
-module Data.Foreign.Generic.Classes where
+module Data.Foreign.Generic.Class where
 
 import Prelude
 import Data.StrMap as S
 import Control.Alt ((<|>))
 import Control.Monad.Except (mapExcept)
-import Data.Array (length, zipWith, (..))
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.Foreign (F, Foreign, ForeignError(..), fail, readArray, readBoolean, readChar, readInt, readNumber, readString, toForeign)
+import Data.Foreign (F, Foreign, ForeignError(..), fail, readArray, readString, toForeign)
+import Data.Foreign.Class (class Encode, class Decode, encode, decode)
 import Data.Foreign.Generic.Types (Options, SumEncoding(..))
 import Data.Foreign.Index (index)
-import Data.Generic.Rep (Argument(Argument), Constructor(Constructor), Field(Field), NoArguments(NoArguments), NoConstructors, Product(Product), Rec(Rec), Sum(Inr, Inl))
+import Data.Generic.Rep (Argument(..), Constructor(..), Field(..), NoArguments(..), NoConstructors, Product(..), Rec(..), Sum(..))
 import Data.List (List(..), fromFoldable, null, singleton, toUnfoldable, (:))
 import Data.Maybe (Maybe(..), maybe)
 import Data.Monoid (mempty)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
-import Data.Traversable (sequence)
 import Type.Proxy (Proxy(..))
-
-class Decode a where
-  read :: Foreign -> F a
-
-instance foreignDecode :: Decode Foreign where
-  read = pure
-
-instance stringDecode :: Decode String where
-  read = readString
-
-instance charDecode :: Decode Char where
-  read = readChar
-
-instance booleanDecode :: Decode Boolean where
-  read = readBoolean
-
-instance numberDecode :: Decode Number where
-  read = readNumber
-
-instance intDecode :: Decode Int where
-  read = readInt
-
-instance arrayDecode :: Decode a => Decode (Array a) where
-  read = readArray >=> readElements where
-    readElements :: Array Foreign -> F (Array a)
-    readElements arr = sequence (zipWith readElement (0 .. length arr) arr)
-
-    readElement :: Int -> Foreign -> F a
-    readElement i value = mapExcept (lmap (map (ErrorAtIndex i))) (read value)
-
-class Encode a where
-  write :: a -> Foreign
-
-instance foreignEncode :: Encode Foreign where
-  write = id
-
-instance stringEncode :: Encode String where
-  write = toForeign
-
-instance charEncode :: Encode Char where
-  write = toForeign
-
-instance booleanEncode :: Encode Boolean where
-  write = toForeign
-
-instance numberEncode :: Encode Number where
-  write = toForeign
-
-instance intEncode :: Encode Int where
-  write = toForeign
-
-instance arrayEncode :: Encode a => Encode (Array a) where
-  write = toForeign <<< map write
 
 class GenericDecode a where
   decodeOpts :: Options -> Foreign -> F a
@@ -185,14 +131,14 @@ instance genericDecodeArgsArgument
   :: Decode a
   => GenericDecodeArgs (Argument a) where
   decodeArgs i (x : xs) = do
-    a <- mapExcept (lmap (map (ErrorAtIndex i))) (read x)
+    a <- mapExcept (lmap (map (ErrorAtIndex i))) (decode x)
     pure { result: Argument a, rest: xs, next: i + 1 }
   decodeArgs _ _ = fail (ForeignError "Not enough constructor arguments")
 
 instance genericEncodeArgsArgument
   :: Encode a
   => GenericEncodeArgs (Argument a) where
-  encodeArgs (Argument a) = singleton (write a)
+  encodeArgs (Argument a) = singleton (encode a)
 
 instance genericDecodeArgsProduct
   :: (GenericDecodeArgs a, GenericDecodeArgs b)
@@ -226,14 +172,14 @@ instance genericDecodeFieldsField
   decodeFields x = do
     let name = reflectSymbol (SProxy :: SProxy name)
     -- If `name` field doesn't exist, then `y` will be `undefined`.
-    Field <$> (index x name >>= read)
+    Field <$> (index x name >>= decode)
 
 instance genericEncodeFieldsField
   :: (IsSymbol name, Encode a)
   => GenericEncodeFields (Field name a) where
   encodeFields (Field a) =
     let name = reflectSymbol (SProxy :: SProxy name)
-    in S.singleton name (write a)
+    in S.singleton name (encode a)
 
 instance genericDecodeFieldsProduct
   :: (GenericDecodeFields a, GenericDecodeFields b)

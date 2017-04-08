@@ -1,13 +1,5 @@
 ## Module Data.Foreign.Generic
 
-#### `parseJSON`
-
-``` purescript
-parseJSON :: String -> F Foreign
-```
-
-Parse a JSON string as `Foreign` data
-
 #### `defaultOptions`
 
 ``` purescript
@@ -20,34 +12,50 @@ Default decoding/encoding options:
 - Unwrap single arguments
 - Don't unwrap single constructors
 
-#### `readGeneric`
+#### `genericDecode`
 
 ``` purescript
-readGeneric :: forall a rep. Generic a rep => GenericDecode rep => Options -> Foreign -> F a
+genericDecode :: forall a rep. Generic a rep => GenericDecode rep => Options -> Foreign -> F a
 ```
 
 Read a value which has a `Generic` type.
 
-#### `toForeignGeneric`
+#### `genericEncode`
 
 ``` purescript
-toForeignGeneric :: forall a rep. Generic a rep => GenericEncode rep => Options -> a -> Foreign
+genericEncode :: forall a rep. Generic a rep => GenericEncode rep => Options -> a -> Foreign
 ```
 
 Generate a `Foreign` value compatible with the `readGeneric` function.
 
-#### `readJSONGeneric`
+#### `decodeJSON`
 
 ``` purescript
-readJSONGeneric :: forall a rep. Generic a rep => GenericDecode rep => Options -> String -> F a
+decodeJSON :: forall a. Decode a => String -> F a
+```
+
+Decode a JSON string using a `Decode` instance.
+
+#### `encodeJSON`
+
+``` purescript
+encodeJSON :: forall a. Encode a => a -> String
+```
+
+Decode a JSON string using a `Decode` instance.
+
+#### `genericDecodeJSON`
+
+``` purescript
+genericDecodeJSON :: forall a rep. Generic a rep => GenericDecode rep => Options -> String -> F a
 ```
 
 Read a value which has a `Generic` type from a JSON String
 
-#### `toJSONGeneric`
+#### `genericEncodeJSON`
 
 ``` purescript
-toJSONGeneric :: forall a rep. Generic a rep => GenericEncode rep => Options -> a -> String
+genericEncodeJSON :: forall a rep. Generic a rep => GenericEncode rep => Options -> a -> String
 ```
 
 Write a value which has a `Generic` type as a JSON String
