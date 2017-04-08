@@ -28,3 +28,5 @@ unNullOrUndefined (NullOrUndefined m) = m
 readNullOrUndefined :: forall a. (Foreign -> F a) -> Foreign -> F (NullOrUndefined a)
 readNullOrUndefined _ value | isNull value || isUndefined value = pure (NullOrUndefined Nothing)
 readNullOrUndefined f value = NullOrUndefined <<< Just <$> f value
+
+foreign import undefined :: Foreign
