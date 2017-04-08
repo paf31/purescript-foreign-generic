@@ -172,7 +172,7 @@ instance genericDecodeFieldsField
   decodeFields x = do
     let name = reflectSymbol (SProxy :: SProxy name)
     -- If `name` field doesn't exist, then `y` will be `undefined`.
-    Field <$> (index x name >>= decode)
+    Field <$> (index x name >>= mapExcept (lmap (map (ErrorAtProperty name))) <<< decode)
 
 instance genericEncodeFieldsField
   :: (IsSymbol name, Encode a)

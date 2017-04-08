@@ -4,39 +4,52 @@
 
 Generic deriving for `purescript-foreign`.
 
-- [Module Documentation](docs/Data/Foreign/Generic.md)
+- [Module Documentation](generated-docs/Data/Foreign/Generic.md)
 - [Example](test/Main.purs)
 - [Further examples in this repo](https://github.com/justinwoo/purescript-howto-foreign-generic)
 
 ## Example Usage
 
+First, define some data type and derive `Generic`:
+
 ```purescript
-import Data.Foreign.Class (class AsForeign, class IsForeign, readJSON, write)
-import Data.Foreign.Generic (defaultOptions, readGeneric, toForeignGeneric)
-import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Show (genericShow)
+> import Prelude
+> import Data.Generic.Rep (class Generic)
+> import Data.Generic.Rep.Show (genericShow)
 
-newtype MyRecord = MyRecord {a :: Int}
+> newtype MyRecord = MyRecord { a :: Int }
+> derive instance genericMyRecord :: Generic MyRecord _
+> instance showMyRecord :: Show MyRecord where show = genericShow
+```
 
-derive instance genericMyRecord :: Generic MyRecord _
+To encode JSON, use `genericEncodeJSON`:
 
-instance isForeignMyRecord :: IsForeign MyRecord where
-  read = readGeneric $ defaultOptions {unwrapSingleConstructors = true}
+```purescript
+> import Data.Foreign.Class (class Encode, class Decode, encode, decode)
+> import Data.Foreign.Generic (defaultOptions, genericDecodeJSON, genericEncodeJSON)
 
-instance asForeignMyRecord :: AsForeign MyRecord where
-  write = toForeignGeneric $ defaultOptions {unwrapSingleConstructors = true}
+> opts = defaultOptions { unwrapSingleConstructors = true }
 
-toJSONString = write >>> unsafeStringify
-fromJSONString = readJSON >>> runExcept
+> genericEncodeJSON opts (MyRecord { a: 1 })
+"{\"a\":1}"
+```
 
-main :: forall e. Eff (console :: CONSOLE | e) Unit
-main = do
-  log $ toJSONString (MyRecord {a: 1})
-  -- {a: 1}
+And to decode JSON, use `genericDecodeJSON`:
 
-  log $ show eMyRecord
-  -- Right (MyRecord {a: 1})
-  where
-    eMyRecord :: Either _ MyRecord
-    eMyRecord = fromJSONString """{"a": 1}"""
+```purescript
+> import Control.Monad.Except
+
+> runExcept (genericDecodeJSON opts "{\"a\":1}" :: _ MyRecord)
+(Right (MyRecord { a: 1 }))
+```
+
+Badly formed JSON will result in a useful error, which can be inspected or pretty-printed:
+
+```purescript
+> lmap (map renderForeignError) $ runExcept (genericDecodeJSON opts "{\"a\":\"abc\"}" :: _ MyRecord)
+(Left
+  (NonEmptyList
+    (NonEmpty
+      "Error at array index 0: (ErrorAtProperty \"a\" (TypeMismatch \"Int\" \"String\"))"
+      Nil)))
 ```
