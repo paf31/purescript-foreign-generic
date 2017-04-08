@@ -1,12 +1,27 @@
-module Data.Foreign.Generic where
+module Data.Foreign.Generic
+  ( defaultOptions
+  , genericDecode
+  , genericEncode
+  , decodeJSON
+  , encodeJSON
+  , genericDecodeJSON
+  , genericEncodeJSON
+  ) where
 
 import Prelude
-import Data.Foreign (F, Foreign, parseJSON)
-import Data.Foreign.Generic.Classes (class GenericDecode, class GenericEncode, decodeOpts, encodeOpts)
+import Data.Foreign (F, Foreign)
+import Data.Foreign.Class (class Decode, class Encode, decode, encode)
+import Data.Foreign.Generic.Class (class GenericDecode, class GenericEncode, decodeOpts, encodeOpts)
 import Data.Foreign.Generic.Types (Options, SumEncoding(..))
+import Data.Foreign.JSON (parseJSON, decodeJSONWith)
 import Data.Generic.Rep (class Generic, from, to)
 import Global.Unsafe (unsafeStringify)
 
+-- | Default decoding/encoding options:
+-- |
+-- | - Represent sum types as records with `tag` and `contents` fields
+-- | - Unwrap single arguments
+-- | - Don't unwrap single constructors
 defaultOptions :: Options
 defaultOptions =
   { sumEncoding:
@@ -19,17 +34,57 @@ defaultOptions =
   }
 
 -- | Read a value which has a `Generic` type.
-readGeneric :: forall a rep. (Generic a rep, GenericDecode rep) => Options -> Foreign -> F a
-readGeneric opts = map to <<< decodeOpts opts
+genericDecode
+  :: forall a rep
+   . Generic a rep
+  => GenericDecode rep
+  => Options
+  -> Foreign
+  -> F a
+genericDecode opts = map to <<< decodeOpts opts
 
 -- | Generate a `Foreign` value compatible with the `readGeneric` function.
-toForeignGeneric :: forall a rep. (Generic a rep, GenericEncode rep) => Options -> a -> Foreign
-toForeignGeneric opts = encodeOpts opts <<< from
+genericEncode
+  :: forall a rep
+   . Generic a rep
+  => GenericEncode rep
+  => Options
+  -> a
+  -> Foreign
+genericEncode opts = encodeOpts opts <<< from
+
+-- | Decode a JSON string using a `Decode` instance.
+decodeJSON
+  :: forall a
+   . Decode a
+  => String
+  -> F a
+decodeJSON = decodeJSONWith decode
+
+-- | Decode a JSON string using a `Decode` instance.
+encodeJSON
+  :: forall a
+   . Encode a
+  => a
+  -> String
+encodeJSON = unsafeStringify <<< encode
 
 -- | Read a value which has a `Generic` type from a JSON String
-readJSONGeneric :: forall a rep. (Generic a rep, GenericDecode rep) => Options -> String -> F a
-readJSONGeneric opts = parseJSON >=> readGeneric opts
+genericDecodeJSON
+  :: forall a rep
+   . Generic a rep
+  => GenericDecode rep
+  => Options
+  -> String
+  -> F a
+genericDecodeJSON opts = genericDecode opts <=< parseJSON
 
 -- | Write a value which has a `Generic` type as a JSON String
-toJSONGeneric :: forall a rep. (Generic a rep, GenericEncode rep) => Options -> a -> String
-toJSONGeneric opts = toForeignGeneric opts >>> unsafeStringify
+genericEncodeJSON
+  :: forall a rep
+   . Generic a rep
+  => GenericEncode rep
+  => Options
+  -> a
+  -> String
+genericEncodeJSON opts = unsafeStringify <<< genericEncode opts

@@ -1,4 +1,4 @@
-module Data.Foreign.Generic.Classes where
+module Data.Foreign.Generic.Class where
 
 import Prelude
 import Data.StrMap as S
@@ -7,10 +7,10 @@ import Control.Monad.Except (mapExcept)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Foreign (F, Foreign, ForeignError(..), fail, readArray, readString, toForeign)
-import Data.Foreign.Class (class AsForeign, class IsForeign, read, readProp, write)
+import Data.Foreign.Class (class Encode, class Decode, encode, decode)
 import Data.Foreign.Generic.Types (Options, SumEncoding(..))
-import Data.Foreign.Index (prop)
-import Data.Generic.Rep (Argument(Argument), Constructor(Constructor), Field(Field), NoArguments(NoArguments), NoConstructors, Product(Product), Rec(Rec), Sum(Inr, Inl))
+import Data.Foreign.Index (index)
+import Data.Generic.Rep (Argument(..), Constructor(..), Field(..), NoArguments(..), NoConstructors, Product(..), Rec(..), Sum(..))
 import Data.List (List(..), fromFoldable, null, singleton, toUnfoldable, (:))
 import Data.Maybe (Maybe(..), maybe)
 import Data.Monoid (mempty)
@@ -56,12 +56,12 @@ instance genericDecodeConstructor
         else case opts.sumEncoding of
                TaggedObject { tagFieldName, contentsFieldName } -> do
                  tag <- mapExcept (lmap (map (ErrorAtProperty contentsFieldName))) do
-                   tag <- prop tagFieldName f >>= readString
+                   tag <- index f tagFieldName >>= readString
                    unless (tag == ctorName) $
                      fail (ForeignError ("Expected " <> show ctorName <> " tag"))
                    pure tag
                  args <- mapExcept (lmap (map (ErrorAtProperty contentsFieldName)))
-                           (prop contentsFieldName f >>= readArguments)
+                           (index f contentsFieldName >>= readArguments)
                  pure (Constructor args)
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
@@ -128,17 +128,17 @@ instance genericEncodeArgsNoArguments :: GenericEncodeArgs NoArguments where
   encodeArgs _ = mempty
 
 instance genericDecodeArgsArgument
-  :: IsForeign a
+  :: Decode a
   => GenericDecodeArgs (Argument a) where
   decodeArgs i (x : xs) = do
-    a <- mapExcept (lmap (map (ErrorAtIndex i))) (read x)
+    a <- mapExcept (lmap (map (ErrorAtIndex i))) (decode x)
     pure { result: Argument a, rest: xs, next: i + 1 }
   decodeArgs _ _ = fail (ForeignError "Not enough constructor arguments")
 
 instance genericEncodeArgsArgument
-  :: AsForeign a
+  :: Encode a
   => GenericEncodeArgs (Argument a) where
-  encodeArgs (Argument a) = singleton (write a)
+  encodeArgs (Argument a) = singleton (encode a)
 
 instance genericDecodeArgsProduct
   :: (GenericDecodeArgs a, GenericDecodeArgs b)
@@ -167,19 +167,19 @@ instance genericEncodeArgsRec
   encodeArgs (Rec fs) = singleton (toForeign (encodeFields fs))
 
 instance genericDecodeFieldsField
-  :: (IsSymbol name, IsForeign a)
+  :: (IsSymbol name, Decode a)
   => GenericDecodeFields (Field name a) where
   decodeFields x = do
     let name = reflectSymbol (SProxy :: SProxy name)
     -- If `name` field doesn't exist, then `y` will be `undefined`.
-    Field <$> readProp name x
+    Field <$> (index x name >>= mapExcept (lmap (map (ErrorAtProperty name))) <<< decode)
 
 instance genericEncodeFieldsField
-  :: (IsSymbol name, AsForeign a)
+  :: (IsSymbol name, Encode a)
   => GenericEncodeFields (Field name a) where
   encodeFields (Field a) =
     let name = reflectSymbol (SProxy :: SProxy name)
-    in S.singleton name (write a)
+    in S.singleton name (encode a)
 
 instance genericDecodeFieldsProduct
   :: (GenericDecodeFields a, GenericDecodeFields b)

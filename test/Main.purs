@@ -6,9 +6,9 @@ import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Except (runExcept)
 import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
-import Data.Foreign.Class (class AsForeign, class IsForeign, readJSON, write)
+import Data.Foreign.Class (class Encode, class Decode)
+import Data.Foreign.Generic (decodeJSON, encodeJSON)
 import Data.Tuple (Tuple(..))
-import Global.Unsafe (unsafeStringify)
 import Test.Assert (assert, assert', ASSERT)
 import Test.Types (IntList(..), RecordTest(..), Tree(..), TupleArray(..))
 
@@ -25,19 +25,18 @@ throw = flip assert' false
 
 testRoundTrip
   :: ∀ a eff
-   . ( Eq a
-     , IsForeign a
-     , AsForeign a
-     )
+   . Eq a
+  => Decode a
+  => Encode a
   => a
   -> Eff ( console :: CONSOLE
          , assert :: ASSERT
          | eff
          ) Unit
 testRoundTrip x = do
-  let json = unsafeStringify (write x)
+  let json = encodeJSON x
   log json
-  case runExcept (readJSON json) of
+  case runExcept (decodeJSON json) of
     Right y -> assert (x == y)
     Left err -> throw (show err)
 
