@@ -5,6 +5,8 @@ import Control.Monad.Except (mapExcept)
 import Data.Array ((..), zipWith, length)
 import Data.Bifunctor (lmap)
 import Data.Foreign (F, Foreign, ForeignError(ErrorAtIndex), readArray, readBoolean, readChar, readInt, readNumber, readString, toForeign)
+import Data.Foreign.NullOrUndefined (NullOrUndefined(..), readNullOrUndefined, undefined)
+import Data.Maybe (maybe)
 import Data.Traversable (sequence)
 
 -- | The `Decode` class is used to generate decoding functions
@@ -89,3 +91,9 @@ instance intEncode :: Encode Int where
 
 instance arrayEncode :: Encode a => Encode (Array a) where
   encode = toForeign <<< map encode
+
+instance decodeNullOrUndefined :: Decode a => Decode (NullOrUndefined a) where
+  decode = readNullOrUndefined decode
+
+instance encodeNullOrUndefined :: Encode a => Encode (NullOrUndefined a) where
+  encode (NullOrUndefined a) = maybe undefined encode a

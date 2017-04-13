@@ -8,9 +8,11 @@ import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
 import Data.Foreign.Class (class Encode, class Decode)
 import Data.Foreign.Generic (decodeJSON, encodeJSON)
+import Data.Foreign.NullOrUndefined (NullOrUndefined(..))
+import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import Test.Assert (assert, assert', ASSERT)
-import Test.Types (IntList(..), RecordTest(..), Tree(..), TupleArray(..))
+import Test.Types (IntList(..), RecordTest(..), Tree(..), TupleArray(..), UndefinedTest(..))
 
 buildTree :: forall a. (a -> TupleArray a a) -> Int -> a -> Tree a
 buildTree _ 0 a = Leaf a
@@ -44,5 +46,9 @@ main :: forall eff. Eff (console :: CONSOLE, assert :: ASSERT | eff) Unit
 main = do
   testRoundTrip (RecordTest { foo: 1, bar: "test", baz: 'a' })
   testRoundTrip (Cons 1 (Cons 2 (Cons 3 Nil)))
+  testRoundTrip (UndefinedTest {a: NullOrUndefined (Just "test")})
+  testRoundTrip (UndefinedTest {a: NullOrUndefined Nothing})
+  testRoundTrip [NullOrUndefined (Just "test")]
+  testRoundTrip [NullOrUndefined (Nothing :: Maybe String)]
   testRoundTrip (makeTree 0)
   testRoundTrip (makeTree 5)

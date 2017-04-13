@@ -5,6 +5,7 @@ import Data.Bifunctor (class Bifunctor)
 import Data.Foreign (ForeignError(ForeignError), fail, readArray, toForeign)
 import Data.Foreign.Class (class Encode, class Decode, encode, decode)
 import Data.Foreign.Generic (defaultOptions, genericDecode, genericEncode)
+import Data.Foreign.NullOrUndefined (NullOrUndefined)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
@@ -86,3 +87,15 @@ instance decodeTree :: Decode a => Decode (Tree a) where
 
 instance encodeTree :: Encode a => Encode (Tree a) where
   encode x = genericEncode defaultOptions x
+
+newtype UndefinedTest = UndefinedTest
+  { a :: NullOrUndefined String
+  }
+
+derive instance eqUT :: Eq UndefinedTest
+derive instance geUT :: Generic UndefinedTest _
+
+instance dUT :: Decode UndefinedTest where
+  decode = genericDecode $ defaultOptions
+instance eUT :: Encode UndefinedTest where
+  encode = genericEncode $ defaultOptions
