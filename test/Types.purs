@@ -1,10 +1,12 @@
 module Test.Types where
 
 import Prelude
+
 import Data.Bifunctor (class Bifunctor)
 import Data.Foreign (ForeignError(ForeignError), fail, readArray, toForeign)
 import Data.Foreign.Class (class Encode, class Decode, encode, decode)
 import Data.Foreign.Generic (defaultOptions, genericDecode, genericEncode)
+import Data.Foreign.Generic.EnumEncoding (defaultGenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
 import Data.Foreign.NullOrUndefined (NullOrUndefined)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
@@ -99,3 +101,16 @@ instance dUT :: Decode UndefinedTest where
   decode = genericDecode $ defaultOptions
 instance eUT :: Encode UndefinedTest where
   encode = genericEncode $ defaultOptions
+
+data Fruit
+  = Apple
+  | Banana
+  | Frikandel
+
+derive instance eqFruit :: Eq Fruit
+derive instance geFruit :: Generic Fruit _
+
+instance dFruit :: Decode Fruit where
+  decode = genericDecodeEnum defaultGenericEnumOptions
+instance eFruit :: Encode Fruit where
+  encode = genericEncodeEnum defaultGenericEnumOptions

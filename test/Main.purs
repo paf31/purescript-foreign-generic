@@ -1,6 +1,7 @@
 module Test.Main where
 
 import Prelude
+
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Except (runExcept)
@@ -8,11 +9,16 @@ import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
 import Data.Foreign.Class (class Encode, class Decode)
 import Data.Foreign.Generic (decodeJSON, encodeJSON)
+import Data.Foreign.Generic.EnumEncoding (class GenericDecodeEnum, class GenericEncodeEnum, GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
+import Data.Foreign.JSON (parseJSON)
 import Data.Foreign.NullOrUndefined (NullOrUndefined(..))
+import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
+import Data.String (toLower, toUpper)
 import Data.Tuple (Tuple(..))
+import Global.Unsafe (unsafeStringify)
 import Test.Assert (assert, assert', ASSERT)
-import Test.Types (IntList(..), RecordTest(..), Tree(..), TupleArray(..), UndefinedTest(..))
+import Test.Types (Fruit(..), IntList(..), RecordTest(..), Tree(..), TupleArray(..), UndefinedTest(..))
 
 buildTree :: forall a. (a -> TupleArray a a) -> Int -> a -> Tree a
 buildTree _ 0 a = Leaf a
@@ -42,6 +48,43 @@ testRoundTrip x = do
     Right y -> assert (x == y)
     Left err -> throw (show err)
 
+testOption
+  :: ∀ a rep eff
+   . Eq a
+  => Generic a rep
+  => GenericEncodeEnum rep
+  => GenericDecodeEnum rep
+  => GenericEnumOptions
+  -> String
+  -> a
+  -> Eff ( console :: CONSOLE
+         , assert :: ASSERT
+         | eff
+         ) Unit
+testOption options string value = do
+  let json = unsafeStringify $ genericEncodeEnum options value
+  log json
+  case runExcept $ Tuple <$> decode' json <*> decode' string of
+    Right (Tuple x y) -> assert (value == y && value == x)
+    Left err -> throw (show err)
+  where
+    decode' = genericDecodeEnum options <=< parseJSON
+
+testUnaryConstructorLiteral :: forall e.
+  Eff
+    ( console :: CONSOLE
+    , assert :: ASSERT
+    | e
+    )
+    Unit
+testUnaryConstructorLiteral = do
+    testOption (makeCasingOptions toUpper) "\"FRIKANDEL\"" Frikandel
+    testOption (makeCasingOptions toLower) "\"frikandel\"" Frikandel
+  where
+    makeCasingOptions f =
+      { constructorTagTransform: f
+      }
+
 main :: forall eff. Eff (console :: CONSOLE, assert :: ASSERT | eff) Unit
 main = do
   testRoundTrip (RecordTest { foo: 1, bar: "test", baz: 'a' })
@@ -50,5 +93,7 @@ main = do
   testRoundTrip (UndefinedTest {a: NullOrUndefined Nothing})
   testRoundTrip [NullOrUndefined (Just "test")]
   testRoundTrip [NullOrUndefined (Nothing :: Maybe String)]
+  testRoundTrip (Apple)
   testRoundTrip (makeTree 0)
   testRoundTrip (makeTree 5)
+  testUnaryConstructorLiteral
