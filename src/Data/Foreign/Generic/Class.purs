@@ -1,7 +1,7 @@
 module Data.Foreign.Generic.Class where
 
 import Prelude
-import Data.StrMap as S
+
 import Control.Alt ((<|>))
 import Control.Monad.Except (mapExcept)
 import Data.Bifunctor (lmap)
@@ -14,6 +14,7 @@ import Data.Generic.Rep (Argument(..), Constructor(..), Field(..), NoArguments(.
 import Data.List (List(..), fromFoldable, null, singleton, toUnfoldable, (:))
 import Data.Maybe (Maybe(..), maybe)
 import Data.Monoid (mempty)
+import Data.StrMap as S
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Type.Proxy (Proxy(..))
 
@@ -54,11 +55,12 @@ instance genericDecodeConstructor
       if opts.unwrapSingleConstructors
         then Constructor <$> readArguments f
         else case opts.sumEncoding of
-               TaggedObject { tagFieldName, contentsFieldName } -> do
+               TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } -> do
                  tag <- mapExcept (lmap (map (ErrorAtProperty contentsFieldName))) do
                    tag <- index f tagFieldName >>= readString
-                   unless (tag == ctorName) $
-                     fail (ForeignError ("Expected " <> show ctorName <> " tag"))
+                   let expected = constructorTagTransform ctorName
+                   unless (constructorTagTransform tag == expected) $
+                     fail (ForeignError ("Expected " <> show expected <> " tag"))
                    pure tag
                  args <- mapExcept (lmap (map (ErrorAtProperty contentsFieldName)))
                            (index f contentsFieldName >>= readArguments)
@@ -90,10 +92,9 @@ instance genericEncodeConstructor
       if opts.unwrapSingleConstructors
         then maybe (toForeign {}) toForeign (encodeArgsArray args)
         else case opts.sumEncoding of
-               TaggedObject { tagFieldName, contentsFieldName } ->
-                 toForeign (S.singleton tagFieldName (toForeign ctorName)
+               TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } ->
+                 toForeign (S.singleton tagFieldName (toForeign $ constructorTagTransform ctorName)
                            `S.union` maybe S.empty (S.singleton contentsFieldName) (encodeArgsArray args))
-
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
 

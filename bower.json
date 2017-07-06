@@ -16,15 +16,16 @@
   },
   "dependencies": {
     "purescript-console": "^3.0.0",
-    "purescript-eff": "^3.0.0",
+    "purescript-eff": "^3.1.0",
     "purescript-exceptions": "^3.0.0",
-    "purescript-foreign": "^4.0.0",
-    "purescript-generics-rep": "^5.0.0",
+    "purescript-foreign": "^4.0.1",
+    "purescript-generics-rep": "^5.1.0",
     "purescript-globals": "^3.0.0",
-    "purescript-maps": "^3.0.0",
+    "purescript-maps": "^3.3.1",
     "purescript-nullable": "^3.0.0",
-    "purescript-proxy": "^2.0.0",
-    "purescript-symbols": "^3.0.0"
+    "purescript-proxy": "^2.1.0",
+    "purescript-symbols": "^3.0.0",
+    "purescript-strings": "^3.2.1"
   },
   "devDependencies": {
     "purescript-assert": "^3.0.0"
