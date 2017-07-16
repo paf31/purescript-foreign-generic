@@ -14,6 +14,7 @@ import Data.Foreign.JSON (parseJSON)
 import Data.Foreign.NullOrUndefined (NullOrUndefined(..))
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
+import Data.StrMap as StrMap
 import Data.String (toLower, toUpper)
 import Data.Tuple (Tuple(..))
 import Global.Unsafe (unsafeStringify)
@@ -96,4 +97,5 @@ main = do
   testRoundTrip (Apple)
   testRoundTrip (makeTree 0)
   testRoundTrip (makeTree 5)
+  testRoundTrip (StrMap.fromFoldable [Tuple "one" 1, Tuple "two" 2])
   testUnaryConstructorLiteral
