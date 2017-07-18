@@ -4,11 +4,12 @@ import Prelude
 import Control.Monad.Except (mapExcept)
 import Data.Array ((..), zipWith, length)
 import Data.Bifunctor (lmap)
-import Data.Foreign (F, Foreign, ForeignError(ErrorAtIndex), readArray, readBoolean, readChar, readInt, readNumber, readString, toForeign, unsafeFromForeign)
+import Data.Foreign (F, Foreign, ForeignError(ErrorAtIndex), readArray, readBoolean, readChar, readInt, readNumber, readString, toForeign)
 import Data.Foreign.NullOrUndefined (NullOrUndefined(..), readNullOrUndefined, undefined)
 import Data.Maybe (maybe)
 import Data.StrMap as StrMap
 import Data.Traversable (sequence)
+import Data.Foreign.Internal (readStrMap)
 
 -- | The `Decode` class is used to generate decoding functions
 -- | of the form `Foreign -> F a` using `generics-rep` deriving.
@@ -55,7 +56,7 @@ instance arrayDecode :: Decode a => Decode (Array a) where
     readElement i value = mapExcept (lmap (map (ErrorAtIndex i))) (decode value)
 
 instance strMapDecode :: (Decode v) => Decode (StrMap.StrMap v) where
-  decode = sequence <<< StrMap.mapWithKey (\_ -> decode) <<< unsafeFromForeign
+  decode = sequence <<< StrMap.mapWithKey (\_ -> decode) <=< readStrMap
 
 -- | The `Encode` class is used to generate encoding functions
 -- | of the form `a -> Foreign` using `generics-rep` deriving.
