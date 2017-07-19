@@ -2,12 +2,12 @@ module Data.Foreign.Internal where
 
 import Prelude
 
-import Data.Foreign (F, Foreign, ForeignError(..), fail, isArray, tagOf, unsafeFromForeign)
+import Data.Foreign (F, Foreign, ForeignError(..), fail, tagOf, unsafeFromForeign)
 import Data.StrMap (StrMap)
 
 -- | Test whether a foreign value is a dictionary
 isStrMap :: Foreign -> Boolean
-isStrMap v = tagOf v == "Object" && not (isArray v || tagOf v == "Date")
+isStrMap v = tagOf v == "Object"
 
 -- | Attempt to coerce a foreign value to a StrMap
 readStrMap :: Foreign -> F (StrMap Foreign)
