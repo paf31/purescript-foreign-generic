@@ -1,20 +1,23 @@
 module Test.Main where
 
 import Prelude
-
+import Data.Map as Map
+import Data.StrMap as StrMap
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Except (runExcept)
 import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
-import Data.Foreign.Class (class Encode, class Decode)
+import Data.Foreign (ForeignError(..), fail)
+import Data.Foreign.Class (class Decode, class DecodeKey, class Encode, class EncodeKey)
 import Data.Foreign.Generic (decodeJSON, encodeJSON)
 import Data.Foreign.Generic.EnumEncoding (class GenericDecodeEnum, class GenericEncodeEnum, GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
 import Data.Foreign.JSON (parseJSON)
 import Data.Foreign.NullOrUndefined (NullOrUndefined(..))
 import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Eq (genericEq)
+import Data.Generic.Rep.Ord (genericCompare)
 import Data.Maybe (Maybe(..))
-import Data.StrMap as StrMap
 import Data.String (toLower, toUpper)
 import Data.Tuple (Tuple(..))
 import Global.Unsafe (unsafeStringify)
@@ -86,6 +89,26 @@ testUnaryConstructorLiteral = do
       { constructorTagTransform: f
       }
 
+
+data Flavor
+  = Strawberry
+  | Melon
+
+derive instance flavorGeneric :: Generic Flavor _
+
+instance flavorEq :: Eq Flavor where eq = genericEq
+
+instance flavorOrd :: Ord Flavor where compare = genericCompare
+
+instance flavorDecodeKey :: DecodeKey Flavor where
+  decodeKey "strawberry" = pure Strawberry
+  decodeKey "melon" = pure Melon
+  decodeKey s = fail $ ForeignError $ "no such flavor:" <> s
+
+instance flavorEncodeKey :: EncodeKey Flavor where
+  encodeKey Strawberry = "strawberry"
+  encodeKey Melon = "melon"
+
 main :: forall eff. Eff (console :: CONSOLE, assert :: ASSERT | eff) Unit
 main = do
   testRoundTrip (RecordTest { foo: 1, bar: "test", baz: 'a' })
@@ -98,4 +121,9 @@ main = do
   testRoundTrip (makeTree 0)
   testRoundTrip (makeTree 5)
   testRoundTrip (StrMap.fromFoldable [Tuple "one" 1, Tuple "two" 2])
+  testRoundTrip (Map.fromFoldable [Tuple Strawberry 1, Tuple Melon 2])
+  testRoundTrip (Map.fromFoldable [Tuple "one" "uno", Tuple "two" "dos"])
+  testRoundTrip (Map.fromFoldable [Tuple 1 2, Tuple 2 4])
+  testRoundTrip (Map.fromFoldable [Tuple true 2, Tuple false 4])
+  testRoundTrip (Map.fromFoldable [Tuple 'a' 2, Tuple 'b' 4])        
   testUnaryConstructorLiteral
