@@ -7,7 +7,9 @@ import Data.Bifunctor (lmap)
 import Data.Foreign (F, Foreign, ForeignError(ErrorAtIndex), readArray, readBoolean, readChar, readInt, readNumber, readString, toForeign)
 import Data.Foreign.NullOrUndefined (NullOrUndefined(..), readNullOrUndefined, undefined)
 import Data.Maybe (maybe)
+import Data.StrMap as StrMap
 import Data.Traversable (sequence)
+import Data.Foreign.Internal (readStrMap)
 
 -- | The `Decode` class is used to generate decoding functions
 -- | of the form `Foreign -> F a` using `generics-rep` deriving.
@@ -53,6 +55,9 @@ instance arrayDecode :: Decode a => Decode (Array a) where
     readElement :: Int -> Foreign -> F a
     readElement i value = mapExcept (lmap (map (ErrorAtIndex i))) (decode value)
 
+instance strMapDecode :: (Decode v) => Decode (StrMap.StrMap v) where
+  decode = sequence <<< StrMap.mapWithKey (\_ -> decode) <=< readStrMap
+
 -- | The `Encode` class is used to generate encoding functions
 -- | of the form `a -> Foreign` using `generics-rep` deriving.
 -- |
@@ -97,3 +102,6 @@ instance decodeNullOrUndefined :: Decode a => Decode (NullOrUndefined a) where
 
 instance encodeNullOrUndefined :: Encode a => Encode (NullOrUndefined a) where
   encode (NullOrUndefined a) = maybe undefined encode a
+
+instance strMapEncode :: Encode v => Encode (StrMap.StrMap v) where 
+  encode = toForeign <<< StrMap.mapWithKey (\_ -> encode)
