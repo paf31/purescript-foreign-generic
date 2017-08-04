@@ -34,6 +34,7 @@ defaultOptions =
         }
   , unwrapSingleConstructors: false
   , unwrapSingleArguments: true
+  , fieldTransform: id
   }
 
 -- | Read a value which has a `Generic` type.

@@ -4,6 +4,7 @@ type Options =
   { sumEncoding :: SumEncoding
   , unwrapSingleConstructors :: Boolean
   , unwrapSingleArguments :: Boolean
+  , fieldTransform :: String -> String
   }
 
 -- | The encoding of sum types for your type.

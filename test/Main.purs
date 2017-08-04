@@ -8,8 +8,10 @@ import Control.Monad.Except (runExcept)
 import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
 import Data.Foreign.Class (class Encode, class Decode)
-import Data.Foreign.Generic (decodeJSON, encodeJSON)
+import Data.Foreign.Generic (decodeJSON, defaultOptions, encodeJSON, genericDecodeJSON, genericEncodeJSON)
+import Data.Foreign.Generic.Class (class GenericDecode, class GenericEncode, encodeFields)
 import Data.Foreign.Generic.EnumEncoding (class GenericDecodeEnum, class GenericEncodeEnum, GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
+import Data.Foreign.Generic.Types (Options, SumEncoding(..))
 import Data.Foreign.JSON (parseJSON)
 import Data.Foreign.NullOrUndefined (NullOrUndefined(..))
 import Data.Generic.Rep (class Generic)
@@ -46,6 +48,25 @@ testRoundTrip x = do
   let json = encodeJSON x
   log json
   case runExcept (decodeJSON json) of
+    Right y -> assert (x == y)
+    Left err -> throw (show err)
+
+testGenericRoundTrip
+  :: ∀ a r eff
+   . Eq a
+  => Generic a r
+  => GenericDecode r
+  => GenericEncode r
+  => Options
+  -> a
+  -> Eff ( console :: CONSOLE
+         , assert :: ASSERT
+         | eff
+         ) Unit
+testGenericRoundTrip opts x = do
+  let json = genericEncodeJSON opts x
+  log json
+  case runExcept (genericDecodeJSON opts json) of
     Right y -> assert (x == y)
     Left err -> throw (show err)
 
@@ -99,3 +120,7 @@ main = do
   testRoundTrip (makeTree 5)
   testRoundTrip (StrMap.fromFoldable [Tuple "one" 1, Tuple "two" 2])
   testUnaryConstructorLiteral
+  let opts = defaultOptions { fieldTransform = toUpper }
+  testGenericRoundTrip opts (RecordTest { foo: 1, bar: "test", baz: 'a' })
+
+

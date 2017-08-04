@@ -25,19 +25,19 @@ class GenericEncode a where
   encodeOpts :: Options -> a -> Foreign
 
 class GenericDecodeArgs a where
-  decodeArgs :: Int -> List Foreign -> F { result :: a
-                                         , rest :: List Foreign
-                                         , next :: Int
-                                         }
+  decodeArgs :: Options -> Int -> List Foreign -> F { result :: a
+                                                    , rest :: List Foreign
+                                                    , next :: Int
+                                                    }
 
 class GenericEncodeArgs a where
-  encodeArgs :: a -> List Foreign
+  encodeArgs :: Options -> a -> List Foreign
 
 class GenericDecodeFields a where
-  decodeFields :: Foreign -> F a
+  decodeFields :: Options -> Foreign -> F a
 
 class GenericEncodeFields a where
-  encodeFields :: a -> S.StrMap Foreign
+  encodeFields :: Options -> a -> S.StrMap Foreign
 
 class GenericCountArgs a where
   countArgs :: Proxy a -> Either a Int
@@ -74,13 +74,13 @@ instance genericDecodeConstructor
         case numArgs of
           Left a -> pure a
           Right 1 | opts.unwrapSingleArguments -> do
-            { result, rest } <- decodeArgs 0 (singleton args)
+            { result, rest } <- decodeArgs opts 0 (singleton args)
             unless (null rest) $
               fail (ForeignError "Expected a single argument")
             pure result
           Right n -> do
             vals <- readArray args
-            { result, rest } <- decodeArgs 0 (fromFoldable vals)
+            { result, rest } <- decodeArgs opts 0 (fromFoldable vals)
             unless (null rest) $
               fail (ForeignError ("Expected " <> show n <> " constructor arguments"))
             pure result
@@ -99,7 +99,7 @@ instance genericEncodeConstructor
       ctorName = reflectSymbol (SProxy :: SProxy name)
 
       encodeArgsArray :: rep -> Maybe Foreign
-      encodeArgsArray = unwrapArguments <<< toUnfoldable <<< encodeArgs
+      encodeArgsArray = unwrapArguments <<< toUnfoldable <<< encodeArgs opts
 
       unwrapArguments :: Array Foreign -> Maybe Foreign
       unwrapArguments [] = Nothing
@@ -122,8 +122,8 @@ instance genericEncodeSum
   encodeOpts opts (Inr b) = encodeOpts (opts { unwrapSingleConstructors = false }) b
 
 instance genericDecodeArgsNoArguments :: GenericDecodeArgs NoArguments where
-  decodeArgs i Nil = pure { result: NoArguments, rest: Nil, next: i }
-  decodeArgs _ _ = fail (ForeignError "Too many constructor arguments")
+  decodeArgs _ i Nil = pure { result: NoArguments, rest: Nil, next: i }
+  decodeArgs _ _ _ = fail (ForeignError "Too many constructor arguments")
 
 instance genericEncodeArgsNoArguments :: GenericEncodeArgs NoArguments where
   encodeArgs _ = mempty
@@ -131,66 +131,66 @@ instance genericEncodeArgsNoArguments :: GenericEncodeArgs NoArguments where
 instance genericDecodeArgsArgument
   :: Decode a
   => GenericDecodeArgs (Argument a) where
-  decodeArgs i (x : xs) = do
+  decodeArgs _ i (x : xs) = do
     a <- mapExcept (lmap (map (ErrorAtIndex i))) (decode x)
     pure { result: Argument a, rest: xs, next: i + 1 }
-  decodeArgs _ _ = fail (ForeignError "Not enough constructor arguments")
+  decodeArgs _ _ _ = fail (ForeignError "Not enough constructor arguments")
 
 instance genericEncodeArgsArgument
   :: Encode a
   => GenericEncodeArgs (Argument a) where
-  encodeArgs (Argument a) = singleton (encode a)
+  encodeArgs _ (Argument a) = singleton (encode a)
 
 instance genericDecodeArgsProduct
   :: (GenericDecodeArgs a, GenericDecodeArgs b)
   => GenericDecodeArgs (Product a b) where
-  decodeArgs i xs = do
-    { result: resA, rest: xs1, next: i1 } <- decodeArgs i xs
-    { result: resB, rest, next } <- decodeArgs i1 xs1
+  decodeArgs opts i xs = do
+    { result: resA, rest: xs1, next: i1 } <- decodeArgs opts i xs
+    { result: resB, rest, next } <- decodeArgs opts i1 xs1
     pure { result: Product resA resB, rest, next }
 
 instance genericEncodeArgsProduct
   :: (GenericEncodeArgs a, GenericEncodeArgs b)
   => GenericEncodeArgs (Product a b) where
-  encodeArgs (Product a b) = encodeArgs a <> encodeArgs b
+  encodeArgs opts (Product a b) = encodeArgs opts a <> encodeArgs opts b
 
 instance genericDecodeArgsRec
   :: GenericDecodeFields fields
   => GenericDecodeArgs (Rec fields) where
-  decodeArgs i (x : xs) = do
-    fields <- mapExcept (lmap (map (ErrorAtIndex i))) (decodeFields x)
+  decodeArgs opts i (x : xs) = do
+    fields <- mapExcept (lmap (map (ErrorAtIndex i))) (decodeFields opts x)
     pure { result: Rec fields, rest: xs, next: i + 1 }
-  decodeArgs _ _ = fail (ForeignError "Not enough constructor arguments")
+  decodeArgs _ _ _ = fail (ForeignError "Not enough constructor arguments")
 
 instance genericEncodeArgsRec
   :: GenericEncodeFields fields
   => GenericEncodeArgs (Rec fields) where
-  encodeArgs (Rec fs) = singleton (toForeign (encodeFields fs))
+  encodeArgs opts (Rec fs) = singleton (toForeign (encodeFields opts fs))
 
 instance genericDecodeFieldsField
   :: (IsSymbol name, Decode a)
   => GenericDecodeFields (Field name a) where
-  decodeFields x = do
-    let name = reflectSymbol (SProxy :: SProxy name)
+  decodeFields opts x = do
+    let name = opts.fieldTransform $ reflectSymbol (SProxy :: SProxy name)
     -- If `name` field doesn't exist, then `y` will be `undefined`.
     Field <$> (index x name >>= mapExcept (lmap (map (ErrorAtProperty name))) <<< decode)
 
 instance genericEncodeFieldsField
   :: (IsSymbol name, Encode a)
   => GenericEncodeFields (Field name a) where
-  encodeFields (Field a) =
-    let name = reflectSymbol (SProxy :: SProxy name)
+  encodeFields opts (Field a) =
+    let name = opts.fieldTransform $ reflectSymbol (SProxy :: SProxy name)
     in S.singleton name (encode a)
 
 instance genericDecodeFieldsProduct
   :: (GenericDecodeFields a, GenericDecodeFields b)
   => GenericDecodeFields (Product a b) where
-  decodeFields x = Product <$> decodeFields x <*> decodeFields x
+  decodeFields opts x = Product <$> decodeFields opts x <*> decodeFields opts x
 
 instance genericEncodeFieldsProduct
   :: (GenericEncodeFields a, GenericEncodeFields b)
   => GenericEncodeFields (Product a b) where
-  encodeFields (Product a b) = encodeFields a `S.union` encodeFields b
+  encodeFields opts (Product a b) = encodeFields opts a `S.union` encodeFields opts b
 
 instance genericCountArgsNoArguments :: GenericCountArgs NoArguments where
   countArgs _ = Left NoArguments
