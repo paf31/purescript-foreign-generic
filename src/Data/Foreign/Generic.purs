@@ -24,6 +24,7 @@ import Global.Unsafe (unsafeStringify)
 -- | - Unwrap single arguments
 -- | - Don't unwrap single constructors
 -- | - Use the constructor names as-is
+-- | - Use the field names as-is
 defaultOptions :: Options
 defaultOptions =
   { sumEncoding:
@@ -34,6 +35,7 @@ defaultOptions =
         }
   , unwrapSingleConstructors: false
   , unwrapSingleArguments: true
+  , fieldTransform: id
   }
 
 -- | Read a value which has a `Generic` type.
