@@ -42,7 +42,7 @@ Decode a JSON string using a `Decode` instance.
 encodeJSON :: forall a. Encode a => a -> String
 ```
 
-Decode a JSON string using a `Decode` instance.
+Encode value that has an `Encode` instance into a JSON string.
 
 #### `genericDecodeJSON`
 
