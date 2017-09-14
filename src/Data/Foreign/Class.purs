@@ -6,6 +6,7 @@ import Data.Array ((..), zipWith, length)
 import Data.Bifunctor (lmap)
 import Data.Foreign (F, Foreign, ForeignError(ErrorAtIndex), readArray, readBoolean, readChar, readInt, readNumber, readString, toForeign)
 import Data.Foreign.NullOrUndefined (NullOrUndefined(..), readNullOrUndefined, undefined)
+import Data.JSDate (JSDate, readDate)
 import Data.Maybe (maybe)
 import Data.StrMap as StrMap
 import Data.Traversable (sequence)
@@ -58,6 +59,9 @@ instance arrayDecode :: Decode a => Decode (Array a) where
 instance strMapDecode :: (Decode v) => Decode (StrMap.StrMap v) where
   decode = sequence <<< StrMap.mapWithKey (\_ -> decode) <=< readStrMap
 
+instance jsDateDecode :: Decode JSDate where
+  decode = readDate
+
 -- | The `Encode` class is used to generate encoding functions
 -- | of the form `a -> Foreign` using `generics-rep` deriving.
 -- |
@@ -103,5 +107,5 @@ instance decodeNullOrUndefined :: Decode a => Decode (NullOrUndefined a) where
 instance encodeNullOrUndefined :: Encode a => Encode (NullOrUndefined a) where
   encode (NullOrUndefined a) = maybe undefined encode a
 
-instance strMapEncode :: Encode v => Encode (StrMap.StrMap v) where 
+instance strMapEncode :: Encode v => Encode (StrMap.StrMap v) where
   encode = toForeign <<< StrMap.mapWithKey (\_ -> encode)
