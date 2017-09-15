@@ -7,14 +7,15 @@ import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Except (runExcept)
 import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
-import Data.Foreign.Class (class Encode, class Decode)
+import Data.Foreign.Class (class Decode, class Encode)
 import Data.Foreign.Generic (decodeJSON, defaultOptions, encodeJSON, genericDecodeJSON, genericEncodeJSON)
-import Data.Foreign.Generic.Class (class GenericDecode, class GenericEncode, encodeFields)
+import Data.Foreign.Generic.Class (class GenericDecode, class GenericEncode)
 import Data.Foreign.Generic.EnumEncoding (class GenericDecodeEnum, class GenericEncodeEnum, GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
-import Data.Foreign.Generic.Types (Options, SumEncoding(..))
+import Data.Foreign.Generic.Types (Options)
 import Data.Foreign.JSON (parseJSON)
 import Data.Foreign.NullOrUndefined (NullOrUndefined(..))
 import Data.Generic.Rep (class Generic)
+import Data.JSDate (JSDate, jsdate, toString)
 import Data.Maybe (Maybe(..))
 import Data.StrMap as StrMap
 import Data.String (toLower, toUpper)
@@ -107,6 +108,20 @@ testUnaryConstructorLiteral = do
       { constructorTagTransform: f
       }
 
+testJSDateRoundTrip
+  :: forall eff
+   . JSDate
+  -> Eff ( console :: CONSOLE
+         , assert :: ASSERT
+         | eff
+         ) Unit
+testJSDateRoundTrip date = do
+  let jsonDate = encodeJSON date
+  log jsonDate
+  case runExcept (decodeJSON jsonDate) of
+    Right decodedDate -> assert (toString date == toString decodedDate)
+    Left err -> throw (show err)
+
 main :: forall eff. Eff (console :: CONSOLE, assert :: ASSERT | eff) Unit
 main = do
   testRoundTrip (RecordTest { foo: 1, bar: "test", baz: 'a' })
@@ -119,8 +134,9 @@ main = do
   testRoundTrip (makeTree 0)
   testRoundTrip (makeTree 5)
   testRoundTrip (StrMap.fromFoldable [Tuple "one" 1, Tuple "two" 2])
+  testJSDateRoundTrip (jsdate
+    { year: 2000.0, month: 2.0, day: 15.0
+    , hour: 20.0, minute: 30.0, second: 40.0, millisecond: 1234.0 })
   testUnaryConstructorLiteral
   let opts = defaultOptions { fieldTransform = toUpper }
   testGenericRoundTrip opts (RecordTest { foo: 1, bar: "test", baz: 'a' })
-
-
