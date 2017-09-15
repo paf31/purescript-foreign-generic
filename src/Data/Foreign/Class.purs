@@ -109,3 +109,6 @@ instance encodeNullOrUndefined :: Encode a => Encode (NullOrUndefined a) where
 
 instance strMapEncode :: Encode v => Encode (StrMap.StrMap v) where
   encode = toForeign <<< StrMap.mapWithKey (\_ -> encode)
+
+instance jsDateEncode :: Encode JSDate where
+  encode = toForeign
