@@ -7,7 +7,7 @@ import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Except (runExcept)
 import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
-import Data.Foreign.Class (class Decode, class Encode, decode, encode)
+import Data.Foreign.Class (class Decode, class Encode)
 import Data.Foreign.Generic (decodeJSON, defaultOptions, encodeJSON, genericDecodeJSON, genericEncodeJSON)
 import Data.Foreign.Generic.Class (class GenericDecode, class GenericEncode)
 import Data.Foreign.Generic.EnumEncoding (class GenericDecodeEnum, class GenericEncodeEnum, GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
@@ -116,9 +116,9 @@ testJSDateRoundTrip
          | eff
          ) Unit
 testJSDateRoundTrip date = do
-  log $ toString date
-  let encodedDate = encode date
-  case runExcept (decode encodedDate) of
+  let jsonDate = encodeJSON date
+  log jsonDate
+  case runExcept (decodeJSON jsonDate) of
     Right decodedDate -> assert (toString date == toString decodedDate)
     Left err -> throw (show err)
 
@@ -136,7 +136,7 @@ main = do
   testRoundTrip (StrMap.fromFoldable [Tuple "one" 1, Tuple "two" 2])
   testJSDateRoundTrip (jsdate
     { year: 2000.0, month: 2.0, day: 15.0
-    , hour: 20.0, minute: 30.0, second: 40.0, millisecond: 120.0 })
+    , hour: 20.0, minute: 30.0, second: 40.0, millisecond: 1234.0 })
   testUnaryConstructorLiteral
   let opts = defaultOptions { fieldTransform = toUpper }
   testGenericRoundTrip opts (RecordTest { foo: 1, bar: "test", baz: 'a' })
