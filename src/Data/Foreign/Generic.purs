@@ -66,7 +66,7 @@ decodeJSON
   -> F a
 decodeJSON = decodeJSONWith decode
 
--- | Decode a JSON string using a `Decode` instance.
+-- | Encode a `Decode` instance using a JSON string.
 encodeJSON
   :: forall a
    . Encode a
