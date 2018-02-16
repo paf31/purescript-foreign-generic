@@ -7,6 +7,7 @@ import Data.Foreign (ForeignError(ForeignError), fail, readArray, toForeign)
 import Data.Foreign.Class (class Encode, class Decode, encode, decode)
 import Data.Foreign.Generic (defaultOptions, genericDecode, genericEncode)
 import Data.Foreign.Generic.EnumEncoding (defaultGenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
+import Data.Foreign.Generic.Types (Options, SumEncoding(..))
 import Data.Foreign.NullOrUndefined (NullOrUndefined)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
@@ -67,11 +68,22 @@ instance showIntList :: Show IntList where
 instance eqIntList :: Eq IntList where
   eq x y = genericEq x y
 
+intListOptions :: Options
+intListOptions =
+  defaultOptions { unwrapSingleConstructors = true
+                 , sumEncoding = TaggedObject { tagFieldName: "tag"
+                                               , contentsFieldName: "contents"
+                                               , constructorTagTransform: \tag -> case tag of
+                                                                                    "Cons" -> "cOnS"
+                                                                                    _ -> ""
+                                               }
+                 }
+
 instance decodeIntList :: Decode IntList where
-  decode x = genericDecode (defaultOptions { unwrapSingleConstructors = true }) x
+  decode x = genericDecode intListOptions x
 
 instance encodeIntList :: Encode IntList where
-  encode x = genericEncode (defaultOptions { unwrapSingleConstructors = true }) x
+  encode x = genericEncode intListOptions x
 
 -- | Balanced binary leaf trees
 data Tree a = Leaf a | Branch (Tree (TupleArray a a))

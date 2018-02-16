@@ -56,10 +56,10 @@ instance genericDecodeConstructor
         then Constructor <$> readArguments f
         else case opts.sumEncoding of
                TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } -> do
-                 tag <- mapExcept (lmap (map (ErrorAtProperty contentsFieldName))) do
+                 tag <- mapExcept (lmap (map (ErrorAtProperty tagFieldName))) do
                    tag <- index f tagFieldName >>= readString
                    let expected = constructorTagTransform ctorName
-                   unless (constructorTagTransform tag == expected) $
+                   unless (tag == expected) $
                      fail (ForeignError ("Expected " <> show expected <> " tag"))
                    pure tag
                  args <- mapExcept (lmap (map (ErrorAtProperty contentsFieldName)))
