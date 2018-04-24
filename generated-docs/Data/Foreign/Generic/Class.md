@@ -32,7 +32,7 @@ GenericEncode NoConstructors
 
 ``` purescript
 class GenericDecodeArgs a  where
-  decodeArgs :: Int -> List Foreign -> F { result :: a, rest :: List Foreign, next :: Int }
+  decodeArgs :: Options -> Int -> List Foreign -> F { result :: a, rest :: List Foreign, next :: Int }
 ```
 
 ##### Instances
@@ -47,7 +47,7 @@ GenericDecodeArgs NoArguments
 
 ``` purescript
 class GenericEncodeArgs a  where
-  encodeArgs :: a -> List Foreign
+  encodeArgs :: Options -> a -> List Foreign
 ```
 
 ##### Instances
@@ -62,7 +62,7 @@ GenericEncodeArgs NoArguments
 
 ``` purescript
 class GenericDecodeFields a  where
-  decodeFields :: Foreign -> F a
+  decodeFields :: Options -> Foreign -> F a
 ```
 
 ##### Instances
@@ -75,7 +75,7 @@ class GenericDecodeFields a  where
 
 ``` purescript
 class GenericEncodeFields a  where
-  encodeFields :: a -> StrMap Foreign
+  encodeFields :: Options -> a -> StrMap Foreign
 ```
 
 ##### Instances

@@ -8,10 +8,10 @@ import Data.Foreign.Class (class Encode, class Decode, encode, decode)
 import Data.Foreign.Generic (defaultOptions, genericDecode, genericEncode)
 import Data.Foreign.Generic.EnumEncoding (defaultGenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
 import Data.Foreign.Generic.Types (Options, SumEncoding(..))
-import Data.Foreign.NullOrUndefined (NullOrUndefined)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
+import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 
 newtype TupleArray a b = TupleArray (Tuple a b)
@@ -103,7 +103,7 @@ instance encodeTree :: Encode a => Encode (Tree a) where
   encode x = genericEncode defaultOptions x
 
 newtype UndefinedTest = UndefinedTest
-  { a :: NullOrUndefined String
+  { a :: Maybe String
   }
 
 derive instance eqUT :: Eq UndefinedTest
