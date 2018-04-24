@@ -11,6 +11,8 @@ Default decoding/encoding options:
 - Represent sum types as records with `tag` and `contents` fields
 - Unwrap single arguments
 - Don't unwrap single constructors
+- Use the constructor names as-is
+- Use the field names as-is
 
 #### `genericDecode`
 
@@ -42,7 +44,7 @@ Decode a JSON string using a `Decode` instance.
 encodeJSON :: forall a. Encode a => a -> String
 ```
 
-Encode value that has an `Encode` instance into a JSON string.
+Encode a JSON string using an `Encode` instance.
 
 #### `genericDecodeJSON`
 

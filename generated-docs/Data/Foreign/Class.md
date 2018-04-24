@@ -25,6 +25,8 @@ to decode your foreign/JSON-encoded data.
 
 ##### Instances
 ``` purescript
+Decode Void
+Decode Unit
 Decode Foreign
 Decode String
 Decode Char
@@ -32,6 +34,8 @@ Decode Boolean
 Decode Number
 Decode Int
 (Decode a) => Decode (Array a)
+(Decode v) => Decode (StrMap v)
+(Decode a) => Decode (NullOrUndefined a)
 ```
 
 #### `Encode`
@@ -59,6 +63,8 @@ to encode your data as JSON.
 
 ##### Instances
 ``` purescript
+Encode Void
+Encode Unit
 Encode Foreign
 Encode String
 Encode Char
@@ -66,6 +72,8 @@ Encode Boolean
 Encode Number
 Encode Int
 (Encode a) => Encode (Array a)
+(Encode a) => Encode (NullOrUndefined a)
+(Encode v) => Encode (StrMap v)
 ```
 
 

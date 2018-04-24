@@ -1,10 +1,11 @@
 module Data.Foreign.Class where
 
 import Prelude
-import Control.Monad.Except (mapExcept)
+import Control.Monad.Except (except, mapExcept)
 import Data.Array ((..), zipWith, length)
 import Data.Bifunctor (lmap)
-import Data.Foreign (F, Foreign, ForeignError(ErrorAtIndex), readArray, readBoolean, readChar, readInt, readNumber, readString, toForeign)
+import Data.Either (Either(..))
+import Data.Foreign (F, Foreign, ForeignError(..), readArray, readBoolean, readChar, readInt, readNumber, readString, toForeign)
 import Data.Foreign.NullOrUndefined (NullOrUndefined(..), readNullOrUndefined, undefined)
 import Data.Maybe (maybe)
 import Data.StrMap as StrMap
@@ -28,6 +29,9 @@ import Data.Foreign.Internal (readStrMap)
 -- | to decode your foreign/JSON-encoded data.
 class Decode a where
   decode :: Foreign -> F a
+
+instance voidDecode :: Decode Void where
+  decode _ = except (Left (pure (ForeignError "Decode: void")))
 
 instance unitDecode :: Decode Unit where
   decode _ = pure unit
@@ -78,6 +82,9 @@ instance strMapDecode :: (Decode v) => Decode (StrMap.StrMap v) where
 -- | to encode your data as JSON.
 class Encode a where
   encode :: a -> Foreign
+
+instance voidEncode :: Encode Void where
+  encode = absurd
 
 instance unitEncode :: Encode Unit where
   encode _ = toForeign {}

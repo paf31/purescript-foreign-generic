@@ -37,4 +37,10 @@ readNullOrUndefined :: forall a. (Foreign -> F a) -> Foreign -> F (NullOrUndefin
 
 Read a `NullOrUndefined` value
 
+#### `undefined`
+
+``` purescript
+undefined :: Foreign
+```
+
 
