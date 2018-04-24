@@ -6,8 +6,8 @@ import Data.Array ((..), zipWith, length)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Foreign (F, Foreign, ForeignError(..), readArray, readBoolean, readChar, readInt, readNumber, readString, toForeign)
-import Data.Foreign.NullOrUndefined (NullOrUndefined(..), readNullOrUndefined, undefined)
-import Data.Maybe (maybe)
+import Data.Foreign.NullOrUndefined (readNullOrUndefined, undefined)
+import Data.Maybe (Maybe, maybe)
 import Data.StrMap as StrMap
 import Data.Traversable (sequence)
 import Data.Foreign.Internal (readStrMap)
@@ -62,6 +62,9 @@ instance arrayDecode :: Decode a => Decode (Array a) where
     readElement :: Int -> Foreign -> F a
     readElement i value = mapExcept (lmap (map (ErrorAtIndex i))) (decode value)
 
+instance maybeDecode :: Decode a => Decode (Maybe a) where
+  decode = readNullOrUndefined decode
+
 instance strMapDecode :: (Decode v) => Decode (StrMap.StrMap v) where
   decode = sequence <<< StrMap.mapWithKey (\_ -> decode) <=< readStrMap
 
@@ -110,11 +113,8 @@ instance intEncode :: Encode Int where
 instance arrayEncode :: Encode a => Encode (Array a) where
   encode = toForeign <<< map encode
 
-instance decodeNullOrUndefined :: Decode a => Decode (NullOrUndefined a) where
-  decode = readNullOrUndefined decode
-
-instance encodeNullOrUndefined :: Encode a => Encode (NullOrUndefined a) where
-  encode (NullOrUndefined a) = maybe undefined encode a
+instance maybeEncode :: Encode a => Encode (Maybe a) where
+  encode = maybe undefined encode
 
 instance strMapEncode :: Encode v => Encode (StrMap.StrMap v) where
   encode = toForeign <<< StrMap.mapWithKey (\_ -> encode)

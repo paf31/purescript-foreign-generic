@@ -13,7 +13,6 @@ import Data.Foreign.Generic.Class (class GenericDecode, class GenericEncode, enc
 import Data.Foreign.Generic.EnumEncoding (class GenericDecodeEnum, class GenericEncodeEnum, GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
 import Data.Foreign.Generic.Types (Options, SumEncoding(..))
 import Data.Foreign.JSON (parseJSON)
-import Data.Foreign.NullOrUndefined (NullOrUndefined(..))
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Data.StrMap as StrMap
@@ -111,10 +110,10 @@ main :: forall eff. Eff (console :: CONSOLE, assert :: ASSERT | eff) Unit
 main = do
   testRoundTrip (RecordTest { foo: 1, bar: "test", baz: 'a' })
   testRoundTrip (Cons 1 (Cons 2 (Cons 3 Nil)))
-  testRoundTrip (UndefinedTest {a: NullOrUndefined (Just "test")})
-  testRoundTrip (UndefinedTest {a: NullOrUndefined Nothing})
-  testRoundTrip [NullOrUndefined (Just "test")]
-  testRoundTrip [NullOrUndefined (Nothing :: Maybe String)]
+  testRoundTrip (UndefinedTest {a: Just "test"})
+  testRoundTrip (UndefinedTest {a: Nothing})
+  testRoundTrip [Just "test"]
+  testRoundTrip [Nothing :: Maybe String]
   testRoundTrip (Apple)
   testRoundTrip (makeTree 0)
   testRoundTrip (makeTree 5)
@@ -122,5 +121,3 @@ main = do
   testUnaryConstructorLiteral
   let opts = defaultOptions { fieldTransform = toUpper }
   testGenericRoundTrip opts (RecordTest { foo: 1, bar: "test", baz: 'a' })
-
-
