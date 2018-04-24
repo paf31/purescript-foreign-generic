@@ -29,6 +29,9 @@ import Data.Foreign.Internal (readStrMap)
 class Decode a where
   decode :: Foreign -> F a
 
+instance unitDecode :: Decode Unit where
+  decode _ = pure unit
+
 instance foreignDecode :: Decode Foreign where
   decode = pure
 
@@ -76,6 +79,9 @@ instance strMapDecode :: (Decode v) => Decode (StrMap.StrMap v) where
 class Encode a where
   encode :: a -> Foreign
 
+instance unitEncode :: Encode Unit where
+  encode _ = toForeign {}
+
 instance foreignEncode :: Encode Foreign where
   encode = id
 
@@ -103,5 +109,5 @@ instance decodeNullOrUndefined :: Decode a => Decode (NullOrUndefined a) where
 instance encodeNullOrUndefined :: Encode a => Encode (NullOrUndefined a) where
   encode (NullOrUndefined a) = maybe undefined encode a
 
-instance strMapEncode :: Encode v => Encode (StrMap.StrMap v) where 
+instance strMapEncode :: Encode v => Encode (StrMap.StrMap v) where
   encode = toForeign <<< StrMap.mapWithKey (\_ -> encode)
