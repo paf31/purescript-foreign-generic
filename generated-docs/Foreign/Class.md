@@ -1,4 +1,4 @@
-## Module Data.Foreign.Class
+## Module Foreign.Class
 
 #### `Decode`
 
@@ -34,8 +34,8 @@ Decode Boolean
 Decode Number
 Decode Int
 (Decode a) => Decode (Array a)
-(Decode v) => Decode (StrMap v)
-(Decode a) => Decode (NullOrUndefined a)
+(Decode a) => Decode (Maybe a)
+(Decode v) => Decode (Object v)
 ```
 
 #### `Encode`
@@ -72,8 +72,8 @@ Encode Boolean
 Encode Number
 Encode Int
 (Encode a) => Encode (Array a)
-(Encode a) => Encode (NullOrUndefined a)
-(Encode v) => Encode (StrMap v)
+(Encode a) => Encode (Maybe a)
+(Encode v) => Encode (Object v)
 ```
 
 

@@ -1,18 +1,19 @@
-module Data.Foreign.JSON
+module Foreign.JSON
   ( parseJSON
   , decodeJSONWith
   ) where
 
 import Prelude
-import Control.Monad.Eff (runPure)
-import Control.Monad.Eff.Exception (EXCEPTION, message, try)
-import Control.Monad.Eff.Uncurried (EffFn1, runEffFn1)
+
 import Control.Monad.Except (ExceptT(..))
 import Data.Bifunctor (lmap)
-import Data.Foreign (Foreign, ForeignError(..), F)
+import Foreign (Foreign, ForeignError(..), F)
 import Data.Identity (Identity(..))
+import Effect.Exception (message, try)
+import Effect.Uncurried (EffectFn1, runEffectFn1)
+import Effect.Unsafe (unsafePerformEffect)
 
-foreign import parseJSONImpl :: forall eff. EffFn1 (exception :: EXCEPTION | eff) String Foreign
+foreign import parseJSONImpl :: EffectFn1 String Foreign
 
 -- | Parse a JSON string as `Foreign` data
 parseJSON :: String -> F Foreign
@@ -22,7 +23,10 @@ parseJSON =
   <<< lmap (pure <<< JSONError <<< message)
   <<< runPure
   <<< try
-  <<< runEffFn1 parseJSONImpl
+  <<< runEffectFn1 parseJSONImpl
+  where
+    -- we have sufficiently caught the error from the effect here
+    runPure = unsafePerformEffect
 
 decodeJSONWith :: forall a. (Foreign -> F a) -> String -> F a
 decodeJSONWith f = f <=< parseJSON

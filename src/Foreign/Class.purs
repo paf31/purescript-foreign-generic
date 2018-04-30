@@ -1,16 +1,16 @@
-module Data.Foreign.Class where
+module Foreign.Class where
 
 import Prelude
 import Control.Monad.Except (except, mapExcept)
 import Data.Array ((..), zipWith, length)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.Foreign (F, Foreign, ForeignError(..), readArray, readBoolean, readChar, readInt, readNumber, readString, toForeign)
-import Data.Foreign.NullOrUndefined (readNullOrUndefined, undefined)
+import Foreign (F, Foreign, ForeignError(..), readArray, readBoolean, readChar, readInt, readNumber, readString, toForeign)
+import Foreign.NullOrUndefined (readNullOrUndefined, undefined)
 import Data.Maybe (Maybe, maybe)
-import Data.StrMap as StrMap
+import Foreign.Object as Object
 import Data.Traversable (sequence)
-import Data.Foreign.Internal (readStrMap)
+import Foreign.Internal (readObject)
 
 -- | The `Decode` class is used to generate decoding functions
 -- | of the form `Foreign -> F a` using `generics-rep` deriving.
@@ -65,8 +65,8 @@ instance arrayDecode :: Decode a => Decode (Array a) where
 instance maybeDecode :: Decode a => Decode (Maybe a) where
   decode = readNullOrUndefined decode
 
-instance strMapDecode :: (Decode v) => Decode (StrMap.StrMap v) where
-  decode = sequence <<< StrMap.mapWithKey (\_ -> decode) <=< readStrMap
+instance strMapDecode :: (Decode v) => Decode (Object.Object v) where
+  decode = sequence <<< Object.mapWithKey (\_ -> decode) <=< readObject
 
 -- | The `Encode` class is used to generate encoding functions
 -- | of the form `a -> Foreign` using `generics-rep` deriving.
@@ -93,7 +93,7 @@ instance unitEncode :: Encode Unit where
   encode _ = toForeign {}
 
 instance foreignEncode :: Encode Foreign where
-  encode = id
+  encode = identity
 
 instance stringEncode :: Encode String where
   encode = toForeign
@@ -116,5 +116,5 @@ instance arrayEncode :: Encode a => Encode (Array a) where
 instance maybeEncode :: Encode a => Encode (Maybe a) where
   encode = maybe undefined encode
 
-instance strMapEncode :: Encode v => Encode (StrMap.StrMap v) where
-  encode = toForeign <<< StrMap.mapWithKey (\_ -> encode)
+instance strMapEncode :: Encode v => Encode (Object.Object v) where
+  encode = toForeign <<< Object.mapWithKey (\_ -> encode)

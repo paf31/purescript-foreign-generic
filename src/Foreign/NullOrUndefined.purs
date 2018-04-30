@@ -1,9 +1,9 @@
-module Data.Foreign.NullOrUndefined where
+module Foreign.NullOrUndefined where
 
 import Prelude
 
 import Data.Maybe (Maybe(..))
-import Data.Foreign (F, Foreign, isUndefined, isNull)
+import Foreign (F, Foreign, isUndefined, isNull)
 
 -- | Read a value which may be null or undeifned.
 readNullOrUndefined :: forall a. (Foreign -> F a) -> Foreign -> F (Maybe a)

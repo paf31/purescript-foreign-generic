@@ -25,8 +25,8 @@ First, define some data type and derive `Generic`:
 To encode JSON, use `genericEncodeJSON`:
 
 ```purescript
-> import Data.Foreign.Class (class Encode, class Decode, encode, decode)
-> import Data.Foreign.Generic (defaultOptions, genericDecodeJSON, genericEncodeJSON)
+> import Foreign.Class (class Encode, class Decode, encode, decode)
+> import Foreign.Generic (defaultOptions, genericDecodeJSON, genericEncodeJSON)
 
 > opts = defaultOptions { unwrapSingleConstructors = true }
 

@@ -2,20 +2,20 @@ module Test.Main where
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE, log)
+import Effect (Effect)
+import Effect.Console (log)
 import Control.Monad.Except (runExcept)
 import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
-import Data.Foreign.Class (class Encode, class Decode)
-import Data.Foreign.Generic (decodeJSON, defaultOptions, encodeJSON, genericDecodeJSON, genericEncodeJSON)
-import Data.Foreign.Generic.Class (class GenericDecode, class GenericEncode, encodeFields)
-import Data.Foreign.Generic.EnumEncoding (class GenericDecodeEnum, class GenericEncodeEnum, GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
-import Data.Foreign.Generic.Types (Options, SumEncoding(..))
-import Data.Foreign.JSON (parseJSON)
+import Foreign.Class (class Encode, class Decode)
+import Foreign.Generic (decodeJSON, defaultOptions, encodeJSON, genericDecodeJSON, genericEncodeJSON)
+import Foreign.Generic.Class (class GenericDecode, class GenericEncode, encodeFields)
+import Foreign.Generic.EnumEncoding (class GenericDecodeEnum, class GenericEncodeEnum, GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
+import Foreign.Generic.Types (Options, SumEncoding(..))
+import Foreign.JSON (parseJSON)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
-import Data.StrMap as StrMap
+import Foreign.Object as Object
 import Data.String (toLower, toUpper)
 import Data.Tuple (Tuple(..))
 import Global.Unsafe (unsafeStringify)
@@ -30,19 +30,16 @@ buildTree f n a = Branch $ buildTree (bimap f f) (n - 1) (f a)
 makeTree :: Int -> Tree Int
 makeTree n = buildTree (\i -> TupleArray (Tuple (2 * i) (2 * i + 1))) n 0
 
-throw :: forall eff. String -> Eff (assert :: ASSERT | eff) Unit
+throw :: String -> Effect Unit
 throw = flip assert' false
 
 testRoundTrip
-  :: ∀ a eff
+  :: ∀ a
    . Eq a
   => Decode a
   => Encode a
   => a
-  -> Eff ( console :: CONSOLE
-         , assert :: ASSERT
-         | eff
-         ) Unit
+  -> Effect Unit
 testRoundTrip x = do
   let json = encodeJSON x
   log json
@@ -51,17 +48,14 @@ testRoundTrip x = do
     Left err -> throw (show err)
 
 testGenericRoundTrip
-  :: ∀ a r eff
+  :: ∀ a r
    . Eq a
   => Generic a r
   => GenericDecode r
   => GenericEncode r
   => Options
   -> a
-  -> Eff ( console :: CONSOLE
-         , assert :: ASSERT
-         | eff
-         ) Unit
+  -> Effect Unit
 testGenericRoundTrip opts x = do
   let json = genericEncodeJSON opts x
   log json
@@ -70,7 +64,7 @@ testGenericRoundTrip opts x = do
     Left err -> throw (show err)
 
 testOption
-  :: ∀ a rep eff
+  :: ∀ a rep
    . Eq a
   => Generic a rep
   => GenericEncodeEnum rep
@@ -78,10 +72,7 @@ testOption
   => GenericEnumOptions
   -> String
   -> a
-  -> Eff ( console :: CONSOLE
-         , assert :: ASSERT
-         | eff
-         ) Unit
+  -> Effect Unit
 testOption options string value = do
   let json = unsafeStringify $ genericEncodeEnum options value
   log json
@@ -91,13 +82,7 @@ testOption options string value = do
   where
     decode' = genericDecodeEnum options <=< parseJSON
 
-testUnaryConstructorLiteral :: forall e.
-  Eff
-    ( console :: CONSOLE
-    , assert :: ASSERT
-    | e
-    )
-    Unit
+testUnaryConstructorLiteral :: Effect Unit
 testUnaryConstructorLiteral = do
     testOption (makeCasingOptions toUpper) "\"FRIKANDEL\"" Frikandel
     testOption (makeCasingOptions toLower) "\"frikandel\"" Frikandel
@@ -106,7 +91,7 @@ testUnaryConstructorLiteral = do
       { constructorTagTransform: f
       }
 
-main :: forall eff. Eff (console :: CONSOLE, assert :: ASSERT | eff) Unit
+main :: Effect Unit
 main = do
   testRoundTrip (RecordTest { foo: 1, bar: "test", baz: 'a' })
   testRoundTrip (Cons 1 (Cons 2 (Cons 3 Nil)))
@@ -117,7 +102,7 @@ main = do
   testRoundTrip (Apple)
   testRoundTrip (makeTree 0)
   testRoundTrip (makeTree 5)
-  testRoundTrip (StrMap.fromFoldable [Tuple "one" 1, Tuple "two" 2])
+  testRoundTrip (Object.fromFoldable [Tuple "one" 1, Tuple "two" 2])
   testUnaryConstructorLiteral
   let opts = defaultOptions { fieldTransform = toUpper }
   testGenericRoundTrip opts (RecordTest { foo: 1, bar: "test", baz: 'a' })
