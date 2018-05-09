@@ -4,6 +4,7 @@ type Options =
   { sumEncoding :: SumEncoding
   , unwrapSingleConstructors :: Boolean
   , unwrapSingleArguments :: Boolean
+  , unwrapSingleRecordArguments :: Boolean
   , fieldTransform :: String -> String
   }
 

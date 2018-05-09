@@ -11,7 +11,7 @@ import Data.Foreign.Generic.Types (Options, SumEncoding(..))
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe)
 import Data.Tuple (Tuple(..))
 
 newtype TupleArray a b = TupleArray (Tuple a b)
@@ -126,3 +126,10 @@ instance dFruit :: Decode Fruit where
   decode = genericDecodeEnum defaultGenericEnumOptions
 instance eFruit :: Encode Fruit where
   encode = genericEncodeEnum defaultGenericEnumOptions
+
+data Mixed =
+    Record { field1 :: String }
+  | Other Int
+
+derive instance eqMixed :: Eq Mixed
+derive instance geMixed :: Generic Mixed _

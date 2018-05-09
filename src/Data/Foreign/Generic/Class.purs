@@ -3,16 +3,16 @@ module Data.Foreign.Generic.Class where
 import Prelude
 
 import Control.Alt ((<|>))
-import Control.Monad.Except (mapExcept)
+import Control.Monad.Except (mapExcept, runExcept)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Foreign (F, Foreign, ForeignError(..), fail, readArray, readString, toForeign)
-import Data.Foreign.Class (class Encode, class Decode, encode, decode)
+import Data.Foreign.Class (class Decode, class Encode, decode, encode)
 import Data.Foreign.Generic.Types (Options, SumEncoding(..))
 import Data.Foreign.Index (index)
 import Data.Generic.Rep (Argument(..), Constructor(..), Field(..), NoArguments(..), NoConstructors, Product(..), Rec(..), Sum(..))
 import Data.List (List(..), fromFoldable, null, singleton, toUnfoldable, (:))
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..))
 import Data.Monoid (mempty)
 import Data.StrMap as S
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
@@ -29,9 +29,16 @@ class GenericDecodeArgs a where
                                                     , rest :: List Foreign
                                                     , next :: Int
                                                     }
+  decodeSingleRecordArg :: Maybe (Options -> Foreign -> F a)
+
+data Arg = RecArg Foreign | PlainArg Foreign
+
+unArg :: Arg -> Foreign
+unArg (RecArg x) = x
+unArg (PlainArg x) = x
 
 class GenericEncodeArgs a where
-  encodeArgs :: Options -> a -> List Foreign
+  encodeArgs :: Options -> a -> List Arg
 
 class GenericDecodeFields a where
   decodeFields :: Options -> Foreign -> F a
@@ -62,8 +69,13 @@ instance genericDecodeConstructor
                    unless (tag == expected) $
                      fail (ForeignError ("Expected " <> show expected <> " tag"))
                    pure tag
-                 args <- mapExcept (lmap (map (ErrorAtProperty contentsFieldName)))
-                           (index f contentsFieldName >>= readArguments)
+                 args <-
+                   case decodeSingleRecordArg of
+                     Just decodeArg | opts.unwrapSingleRecordArguments ->
+                       decodeArg opts f
+                     _ ->
+                       mapExcept (lmap (map (ErrorAtProperty contentsFieldName)))
+                         (index f contentsFieldName >>= readArguments)
                  pure (Constructor args)
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
@@ -90,21 +102,30 @@ instance genericEncodeConstructor
   => GenericEncode (Constructor name rep) where
   encodeOpts opts (Constructor args) =
       if opts.unwrapSingleConstructors
-        then maybe (toForeign {}) toForeign (encodeArgsArray args)
+        then  encodeArgsArray (toForeign {}) toForeign id args
         else case opts.sumEncoding of
                TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } ->
                  toForeign (S.singleton tagFieldName (toForeign $ constructorTagTransform ctorName)
-                           `S.union` maybe S.empty (S.singleton contentsFieldName) (encodeArgsArray args))
+                           `S.union` encodeArgsArray S.empty id (S.singleton contentsFieldName) args)
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
 
-      encodeArgsArray :: rep -> Maybe Foreign
-      encodeArgsArray = unwrapArguments <<< toUnfoldable <<< encodeArgs opts
+      encodeArgsArray :: forall a. a -> (S.StrMap Foreign -> a) -> (Foreign -> a) -> rep -> a
+      encodeArgsArray empty record wrapContents =
+        unwrapArguments empty record wrapContents <<< toUnfoldable <<< encodeArgs opts
 
-      unwrapArguments :: Array Foreign -> Maybe Foreign
-      unwrapArguments [] = Nothing
-      unwrapArguments [x] | opts.unwrapSingleArguments = Just x
-      unwrapArguments xs = Just (toForeign xs)
+      unwrapArguments :: forall a. a -> (S.StrMap Foreign -> a) -> (Foreign -> a) -> Array Arg -> a
+      unwrapArguments empty _ _ []
+        = empty
+      unwrapArguments _ record _ [RecArg x]
+        | opts.unwrapSingleRecordArguments
+        , Right contents <- runExcept (decode x)
+          = record contents
+      unwrapArguments _ _ wrapContents [x]
+        | opts.unwrapSingleArguments
+          = wrapContents (unArg x)
+      unwrapArguments _ _ wrapContents xs
+        = wrapContents (toForeign (map unArg xs))
 
 instance genericDecodeSum
   :: (GenericDecode a, GenericDecode b)
@@ -124,6 +145,7 @@ instance genericEncodeSum
 instance genericDecodeArgsNoArguments :: GenericDecodeArgs NoArguments where
   decodeArgs _ i Nil = pure { result: NoArguments, rest: Nil, next: i }
   decodeArgs _ _ _ = fail (ForeignError "Too many constructor arguments")
+  decodeSingleRecordArg = Nothing
 
 instance genericEncodeArgsNoArguments :: GenericEncodeArgs NoArguments where
   encodeArgs _ = mempty
@@ -135,11 +157,12 @@ instance genericDecodeArgsArgument
     a <- mapExcept (lmap (map (ErrorAtIndex i))) (decode x)
     pure { result: Argument a, rest: xs, next: i + 1 }
   decodeArgs _ _ _ = fail (ForeignError "Not enough constructor arguments")
+  decodeSingleRecordArg = Nothing
 
 instance genericEncodeArgsArgument
   :: Encode a
   => GenericEncodeArgs (Argument a) where
-  encodeArgs _ (Argument a) = singleton (encode a)
+  encodeArgs _ (Argument a) = singleton (PlainArg (encode a))
 
 instance genericDecodeArgsProduct
   :: (GenericDecodeArgs a, GenericDecodeArgs b)
@@ -148,6 +171,7 @@ instance genericDecodeArgsProduct
     { result: resA, rest: xs1, next: i1 } <- decodeArgs opts i xs
     { result: resB, rest, next } <- decodeArgs opts i1 xs1
     pure { result: Product resA resB, rest, next }
+  decodeSingleRecordArg = Nothing
 
 instance genericEncodeArgsProduct
   :: (GenericEncodeArgs a, GenericEncodeArgs b)
@@ -161,11 +185,12 @@ instance genericDecodeArgsRec
     fields <- mapExcept (lmap (map (ErrorAtIndex i))) (decodeFields opts x)
     pure { result: Rec fields, rest: xs, next: i + 1 }
   decodeArgs _ _ _ = fail (ForeignError "Not enough constructor arguments")
+  decodeSingleRecordArg = Just (\opts x -> Rec <$> decodeFields opts x)
 
 instance genericEncodeArgsRec
   :: GenericEncodeFields fields
   => GenericEncodeArgs (Rec fields) where
-  encodeArgs opts (Rec fs) = singleton (toForeign (encodeFields opts fs))
+  encodeArgs opts (Rec fs) = singleton (RecArg (toForeign (encodeFields opts fs)))
 
 instance genericDecodeFieldsField
   :: (IsSymbol name, Decode a)

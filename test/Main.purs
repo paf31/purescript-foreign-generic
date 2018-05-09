@@ -8,7 +8,7 @@ import Control.Monad.Except (runExcept)
 import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
 import Data.Foreign.Class (class Encode, class Decode)
-import Data.Foreign.Generic (decodeJSON, defaultOptions, encodeJSON, genericDecodeJSON, genericEncodeJSON)
+import Data.Foreign.Generic (decodeJSON, defaultOptions, encodeJSON, genericDecodeJSON, genericEncode, genericEncodeJSON)
 import Data.Foreign.Generic.Class (class GenericDecode, class GenericEncode, encodeFields)
 import Data.Foreign.Generic.EnumEncoding (class GenericDecodeEnum, class GenericEncodeEnum, GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
 import Data.Foreign.Generic.Types (Options, SumEncoding(..))
@@ -20,7 +20,7 @@ import Data.String (toLower, toUpper)
 import Data.Tuple (Tuple(..))
 import Global.Unsafe (unsafeStringify)
 import Test.Assert (assert, assert', ASSERT)
-import Test.Types (Fruit(..), IntList(..), RecordTest(..), Tree(..), TupleArray(..), UndefinedTest(..))
+import Test.Types (Fruit(..), IntList(..), Mixed(..), RecordTest(..), Tree(..), TupleArray(..), UndefinedTest(..))
 
 buildTree :: forall a. (a -> TupleArray a a) -> Int -> a -> Tree a
 buildTree _ 0 a = Leaf a
@@ -106,6 +106,25 @@ testUnaryConstructorLiteral = do
       { constructorTagTransform: f
       }
 
+testUnwrapSingleRecordArguments :: forall e.
+  Eff
+    ( console :: CONSOLE
+    , assert :: ASSERT
+    | e
+    )
+    Unit
+testUnwrapSingleRecordArguments = do
+  let opts = defaultOptions { unwrapSingleRecordArguments = true }
+
+  let
+    encoded = encodeJSON (genericEncode opts (Record { field1: "foo" }))
+    expected = """{"field1":"foo","tag":"Record"}"""
+  assert' ("Expected " <> expected <> ", got " <> encoded)
+    (encoded == expected)
+
+  testGenericRoundTrip opts (Record { field1: "foo" })
+  testGenericRoundTrip opts (Other 1)
+
 main :: forall eff. Eff (console :: CONSOLE, assert :: ASSERT | eff) Unit
 main = do
   testRoundTrip (RecordTest { foo: 1, bar: "test", baz: 'a' })
@@ -121,3 +140,4 @@ main = do
   testUnaryConstructorLiteral
   let opts = defaultOptions { fieldTransform = toUpper }
   testGenericRoundTrip opts (RecordTest { foo: 1, bar: "test", baz: 'a' })
+  testUnwrapSingleRecordArguments

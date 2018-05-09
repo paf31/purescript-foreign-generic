@@ -35,6 +35,7 @@ defaultOptions =
         }
   , unwrapSingleConstructors: false
   , unwrapSingleArguments: true
+  , unwrapSingleRecordArguments: false
   , fieldTransform: id
   }
 
