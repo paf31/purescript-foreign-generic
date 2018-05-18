@@ -31,8 +31,12 @@ class GenericDecodeArgs a where
                                                     }
   decodeSingleRecordArg :: Maybe (Options -> Foreign -> F a)
 
+-- | Encoded constructor argument, with information about whether it was a record.
+-- | This can be used to handle the special case of a single record argument.
+-- | See the `unwrapSingleRecordArguments` option.
 data Arg = RecArg Foreign | PlainArg Foreign
 
+-- | Forget the record flag.
 unArg :: Arg -> Foreign
 unArg (RecArg x) = x
 unArg (PlainArg x) = x
@@ -97,35 +101,55 @@ instance genericDecodeConstructor
               fail (ForeignError ("Expected " <> show n <> " constructor arguments"))
             pure result
 
+-- | A way to encode different configuration of constructor arguments.
+type EncodeArgs r =
+  { noArgs :: r
+  , singleRecord :: S.StrMap Foreign -> r
+  , default :: Foreign -> r
+  }
+
 instance genericEncodeConstructor
   :: (IsSymbol name, GenericEncodeArgs rep)
   => GenericEncode (Constructor name rep) where
   encodeOpts opts (Constructor args) =
       if opts.unwrapSingleConstructors
-        then  encodeArgsArray (toForeign {}) toForeign id args
+        then encodeArgsArray
+              { noArgs: toForeign {}
+              , singleRecord: toForeign
+              , default: id
+              } args
         else case opts.sumEncoding of
                TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } ->
-                 toForeign (S.singleton tagFieldName (toForeign $ constructorTagTransform ctorName)
-                           `S.union` encodeArgsArray S.empty id (S.singleton contentsFieldName) args)
+                 let
+                   encodedTag = S.singleton tagFieldName (toForeign $ constructorTagTransform ctorName)
+                   encodedArgs = encodeArgsArray
+                                   { noArgs: S.empty
+                                   , singleRecord: \r ->
+                                       if opts.unwrapSingleRecordArguments
+                                         then r
+                                         else S.singleton contentsFieldName (toForeign r)
+                                   , default: S.singleton contentsFieldName
+                                   } args
+                 in
+                   toForeign (encodedTag `S.union` encodedArgs)
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
 
-      encodeArgsArray :: forall a. a -> (S.StrMap Foreign -> a) -> (Foreign -> a) -> rep -> a
-      encodeArgsArray empty record wrapContents =
-        unwrapArguments empty record wrapContents <<< toUnfoldable <<< encodeArgs opts
+      encodeArgsArray :: forall a. EncodeArgs a -> rep -> a
+      encodeArgsArray encoding =
+        unwrapArguments encoding <<< toUnfoldable <<< encodeArgs opts
 
-      unwrapArguments :: forall a. a -> (S.StrMap Foreign -> a) -> (Foreign -> a) -> Array Arg -> a
-      unwrapArguments empty _ _ []
-        = empty
-      unwrapArguments _ record _ [RecArg x]
-        | opts.unwrapSingleRecordArguments
-        , Right contents <- runExcept (decode x)
-          = record contents
-      unwrapArguments _ _ wrapContents [x]
+      unwrapArguments :: forall a. EncodeArgs a -> Array Arg -> a
+      unwrapArguments encoding []
+        = encoding.noArgs
+      unwrapArguments encoding [RecArg x]
+        | Right contents <- runExcept (decode x)
+          = encoding.singleRecord contents
+      unwrapArguments encoding [x]
         | opts.unwrapSingleArguments
-          = wrapContents (unArg x)
-      unwrapArguments _ _ wrapContents xs
-        = wrapContents (toForeign (map unArg xs))
+          = encoding.default (unArg x)
+      unwrapArguments encoding xs
+        = encoding.default (toForeign (map unArg xs))
 
 instance genericDecodeSum
   :: (GenericDecode a, GenericDecode b)
