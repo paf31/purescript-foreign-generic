@@ -1,4 +1,4 @@
-module Data.Foreign.Generic.Types where
+module Foreign.Generic.Types where
 
 type Options =
   { sumEncoding :: SumEncoding

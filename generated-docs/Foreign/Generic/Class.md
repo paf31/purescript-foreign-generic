@@ -1,4 +1,4 @@
-## Module Data.Foreign.Generic.Class
+## Module Foreign.Generic.Class
 
 #### `GenericDecode`
 
@@ -40,7 +40,6 @@ class GenericDecodeArgs a  where
 GenericDecodeArgs NoArguments
 (Decode a) => GenericDecodeArgs (Argument a)
 (GenericDecodeArgs a, GenericDecodeArgs b) => GenericDecodeArgs (Product a b)
-(GenericDecodeFields fields) => GenericDecodeArgs (Rec fields)
 ```
 
 #### `GenericEncodeArgs`
@@ -55,7 +54,6 @@ class GenericEncodeArgs a  where
 GenericEncodeArgs NoArguments
 (Encode a) => GenericEncodeArgs (Argument a)
 (GenericEncodeArgs a, GenericEncodeArgs b) => GenericEncodeArgs (Product a b)
-(GenericEncodeFields fields) => GenericEncodeArgs (Rec fields)
 ```
 
 #### `GenericDecodeFields`
@@ -67,7 +65,6 @@ class GenericDecodeFields a  where
 
 ##### Instances
 ``` purescript
-(IsSymbol name, Decode a) => GenericDecodeFields (Field name a)
 (GenericDecodeFields a, GenericDecodeFields b) => GenericDecodeFields (Product a b)
 ```
 
@@ -75,12 +72,11 @@ class GenericDecodeFields a  where
 
 ``` purescript
 class GenericEncodeFields a  where
-  encodeFields :: Options -> a -> StrMap Foreign
+  encodeFields :: Options -> a -> Object Foreign
 ```
 
 ##### Instances
 ``` purescript
-(IsSymbol name, Encode a) => GenericEncodeFields (Field name a)
 (GenericEncodeFields a, GenericEncodeFields b) => GenericEncodeFields (Product a b)
 ```
 
@@ -96,7 +92,6 @@ class GenericCountArgs a  where
 GenericCountArgs NoArguments
 GenericCountArgs (Argument a)
 (GenericCountArgs a, GenericCountArgs b) => GenericCountArgs (Product a b)
-GenericCountArgs (Rec fields)
 ```
 
 

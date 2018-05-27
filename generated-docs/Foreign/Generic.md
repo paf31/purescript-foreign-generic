@@ -1,4 +1,4 @@
-## Module Data.Foreign.Generic
+## Module Foreign.Generic
 
 #### `defaultOptions`
 

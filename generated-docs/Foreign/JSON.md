@@ -1,4 +1,4 @@
-## Module Data.Foreign.JSON
+## Module Foreign.JSON
 
 #### `parseJSON`
 

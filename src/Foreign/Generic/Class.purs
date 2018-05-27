@@ -1,4 +1,4 @@
-module Data.Foreign.Generic.Class where
+module Foreign.Generic.Class where
 
 import Prelude
 
@@ -6,15 +6,14 @@ import Control.Alt ((<|>))
 import Control.Monad.Except (mapExcept)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.Foreign (F, Foreign, ForeignError(..), fail, readArray, readString, toForeign)
-import Data.Foreign.Class (class Encode, class Decode, encode, decode)
-import Data.Foreign.Generic.Types (Options, SumEncoding(..))
-import Data.Foreign.Index (index)
-import Data.Generic.Rep (Argument(..), Constructor(..), Field(..), NoArguments(..), NoConstructors, Product(..), Rec(..), Sum(..))
+import Foreign (F, Foreign, ForeignError(..), fail, readArray, readString, unsafeToForeign)
+import Foreign.Class (class Encode, class Decode, encode, decode)
+import Foreign.Generic.Types (Options, SumEncoding(..))
+import Foreign.Index (index)
+import Data.Generic.Rep (Argument(..), Constructor(..), NoArguments(..), NoConstructors, Product(..), Sum(..))
 import Data.List (List(..), fromFoldable, null, singleton, toUnfoldable, (:))
 import Data.Maybe (Maybe(..), maybe)
-import Data.Monoid (mempty)
-import Data.StrMap as S
+import Foreign.Object as S
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Type.Proxy (Proxy(..))
 
@@ -37,7 +36,7 @@ class GenericDecodeFields a where
   decodeFields :: Options -> Foreign -> F a
 
 class GenericEncodeFields a where
-  encodeFields :: Options -> a -> S.StrMap Foreign
+  encodeFields :: Options -> a -> S.Object Foreign
 
 class GenericCountArgs a where
   countArgs :: Proxy a -> Either a Int
@@ -90,10 +89,10 @@ instance genericEncodeConstructor
   => GenericEncode (Constructor name rep) where
   encodeOpts opts (Constructor args) =
       if opts.unwrapSingleConstructors
-        then maybe (toForeign {}) toForeign (encodeArgsArray args)
+        then maybe (unsafeToForeign {}) unsafeToForeign (encodeArgsArray args)
         else case opts.sumEncoding of
                TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } ->
-                 toForeign (S.singleton tagFieldName (toForeign $ constructorTagTransform ctorName)
+                 unsafeToForeign (S.singleton tagFieldName (unsafeToForeign $ constructorTagTransform ctorName)
                            `S.union` maybe S.empty (S.singleton contentsFieldName) (encodeArgsArray args))
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
@@ -104,7 +103,7 @@ instance genericEncodeConstructor
       unwrapArguments :: Array Foreign -> Maybe Foreign
       unwrapArguments [] = Nothing
       unwrapArguments [x] | opts.unwrapSingleArguments = Just x
-      unwrapArguments xs = Just (toForeign xs)
+      unwrapArguments xs = Just (unsafeToForeign xs)
 
 instance genericDecodeSum
   :: (GenericDecode a, GenericDecode b)
@@ -154,34 +153,6 @@ instance genericEncodeArgsProduct
   => GenericEncodeArgs (Product a b) where
   encodeArgs opts (Product a b) = encodeArgs opts a <> encodeArgs opts b
 
-instance genericDecodeArgsRec
-  :: GenericDecodeFields fields
-  => GenericDecodeArgs (Rec fields) where
-  decodeArgs opts i (x : xs) = do
-    fields <- mapExcept (lmap (map (ErrorAtIndex i))) (decodeFields opts x)
-    pure { result: Rec fields, rest: xs, next: i + 1 }
-  decodeArgs _ _ _ = fail (ForeignError "Not enough constructor arguments")
-
-instance genericEncodeArgsRec
-  :: GenericEncodeFields fields
-  => GenericEncodeArgs (Rec fields) where
-  encodeArgs opts (Rec fs) = singleton (toForeign (encodeFields opts fs))
-
-instance genericDecodeFieldsField
-  :: (IsSymbol name, Decode a)
-  => GenericDecodeFields (Field name a) where
-  decodeFields opts x = do
-    let name = opts.fieldTransform $ reflectSymbol (SProxy :: SProxy name)
-    -- If `name` field doesn't exist, then `y` will be `undefined`.
-    Field <$> (index x name >>= mapExcept (lmap (map (ErrorAtProperty name))) <<< decode)
-
-instance genericEncodeFieldsField
-  :: (IsSymbol name, Encode a)
-  => GenericEncodeFields (Field name a) where
-  encodeFields opts (Field a) =
-    let name = opts.fieldTransform $ reflectSymbol (SProxy :: SProxy name)
-    in S.singleton name (encode a)
-
 instance genericDecodeFieldsProduct
   :: (GenericDecodeFields a, GenericDecodeFields b)
   => GenericDecodeFields (Product a b) where
@@ -207,6 +178,3 @@ instance genericCountArgsProduct
       Left _ , Right n -> Right n
       Right n, Left _  -> Right n
       Right n, Right m -> Right (n + m)
-
-instance genericCountArgsRec :: GenericCountArgs (Rec fields) where
-  countArgs _ = Right 1

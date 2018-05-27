@@ -1,4 +1,4 @@
-## Module Data.Foreign.Generic.Types
+## Module Foreign.Generic.Types
 
 #### `Options`
 
