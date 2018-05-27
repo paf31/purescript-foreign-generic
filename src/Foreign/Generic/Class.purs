@@ -6,7 +6,7 @@ import Control.Alt ((<|>))
 import Control.Monad.Except (mapExcept)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Foreign (F, Foreign, ForeignError(..), fail, readArray, readString, toForeign)
+import Foreign (F, Foreign, ForeignError(..), fail, readArray, readString, unsafeToForeign)
 import Foreign.Class (class Encode, class Decode, encode, decode)
 import Foreign.Generic.Types (Options, SumEncoding(..))
 import Foreign.Index (index)
@@ -89,10 +89,10 @@ instance genericEncodeConstructor
   => GenericEncode (Constructor name rep) where
   encodeOpts opts (Constructor args) =
       if opts.unwrapSingleConstructors
-        then maybe (toForeign {}) toForeign (encodeArgsArray args)
+        then maybe (unsafeToForeign {}) unsafeToForeign (encodeArgsArray args)
         else case opts.sumEncoding of
                TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } ->
-                 toForeign (S.singleton tagFieldName (toForeign $ constructorTagTransform ctorName)
+                 unsafeToForeign (S.singleton tagFieldName (unsafeToForeign $ constructorTagTransform ctorName)
                            `S.union` maybe S.empty (S.singleton contentsFieldName) (encodeArgsArray args))
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
@@ -103,7 +103,7 @@ instance genericEncodeConstructor
       unwrapArguments :: Array Foreign -> Maybe Foreign
       unwrapArguments [] = Nothing
       unwrapArguments [x] | opts.unwrapSingleArguments = Just x
-      unwrapArguments xs = Just (toForeign xs)
+      unwrapArguments xs = Just (unsafeToForeign xs)
 
 instance genericDecodeSum
   :: (GenericDecode a, GenericDecode b)

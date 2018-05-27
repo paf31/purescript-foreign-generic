@@ -20,7 +20,7 @@ parseJSON :: String -> F Foreign
 parseJSON =
   ExceptT
   <<< Identity
-  <<< lmap (pure <<< JSONError <<< message)
+  <<< lmap (pure <<< ForeignError <<< message)
   <<< runPure
   <<< try
   <<< runEffectFn1 parseJSONImpl

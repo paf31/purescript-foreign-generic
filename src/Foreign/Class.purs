@@ -5,7 +5,7 @@ import Control.Monad.Except (except, mapExcept)
 import Data.Array ((..), zipWith, length)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Foreign (F, Foreign, ForeignError(..), readArray, readBoolean, readChar, readInt, readNumber, readString, toForeign)
+import Foreign (F, Foreign, ForeignError(..), readArray, readBoolean, readChar, readInt, readNumber, readString, unsafeToForeign)
 import Foreign.NullOrUndefined (readNullOrUndefined, undefined)
 import Data.Maybe (Maybe, maybe)
 import Foreign.Object as Object
@@ -90,31 +90,31 @@ instance voidEncode :: Encode Void where
   encode = absurd
 
 instance unitEncode :: Encode Unit where
-  encode _ = toForeign {}
+  encode _ = unsafeToForeign {}
 
 instance foreignEncode :: Encode Foreign where
   encode = identity
 
 instance stringEncode :: Encode String where
-  encode = toForeign
+  encode = unsafeToForeign
 
 instance charEncode :: Encode Char where
-  encode = toForeign
+  encode = unsafeToForeign
 
 instance booleanEncode :: Encode Boolean where
-  encode = toForeign
+  encode = unsafeToForeign
 
 instance numberEncode :: Encode Number where
-  encode = toForeign
+  encode = unsafeToForeign
 
 instance intEncode :: Encode Int where
-  encode = toForeign
+  encode = unsafeToForeign
 
 instance arrayEncode :: Encode a => Encode (Array a) where
-  encode = toForeign <<< map encode
+  encode = unsafeToForeign <<< map encode
 
 instance maybeEncode :: Encode a => Encode (Maybe a) where
   encode = maybe undefined encode
 
 instance strMapEncode :: Encode v => Encode (Object.Object v) where
-  encode = toForeign <<< Object.mapWithKey (\_ -> encode)
+  encode = unsafeToForeign <<< Object.mapWithKey (\_ -> encode)

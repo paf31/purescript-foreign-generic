@@ -3,7 +3,7 @@ module Foreign.Generic.EnumEncoding where
 import Prelude
 
 import Control.Alt ((<|>))
-import Foreign (F, Foreign, ForeignError(..), fail, readString, toForeign)
+import Foreign (F, Foreign, ForeignError(..), fail, readString, unsafeToForeign)
 import Data.Generic.Rep (class Generic, Constructor(Constructor), NoArguments(NoArguments), Sum(Inr, Inl), from, to)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Partial.Unsafe (unsafeCrashWith)
@@ -93,7 +93,7 @@ instance sumGenericEncodeEnum
 instance ctorNoArgsGenericEncodeEnum
   :: IsSymbol name
   => GenericEncodeEnum (Constructor name NoArguments) where
-  encodeEnum {constructorTagTransform} _ = toForeign ctorName
+  encodeEnum {constructorTagTransform} _ = unsafeToForeign ctorName
     where
       ctorName = constructorTagTransform $ reflectSymbol (SProxy :: SProxy name)
 

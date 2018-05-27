@@ -8,10 +8,10 @@ import Control.Monad.Except (runExcept)
 import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
 import Foreign.Class (class Encode, class Decode)
-import Foreign.Generic (decodeJSON, defaultOptions, encodeJSON, genericDecodeJSON, genericEncodeJSON)
-import Foreign.Generic.Class (class GenericDecode, class GenericEncode, encodeFields)
+import Foreign.Generic (decodeJSON, encodeJSON, genericDecodeJSON, genericEncodeJSON)
+import Foreign.Generic.Class (class GenericDecode, class GenericEncode)
 import Foreign.Generic.EnumEncoding (class GenericDecodeEnum, class GenericEncodeEnum, GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
-import Foreign.Generic.Types (Options, SumEncoding(..))
+import Foreign.Generic.Types (Options)
 import Foreign.JSON (parseJSON)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
@@ -19,8 +19,8 @@ import Foreign.Object as Object
 import Data.String (toLower, toUpper)
 import Data.Tuple (Tuple(..))
 import Global.Unsafe (unsafeStringify)
-import Test.Assert (assert, assert', ASSERT)
-import Test.Types (Fruit(..), IntList(..), RecordTest(..), Tree(..), TupleArray(..), UndefinedTest(..))
+import Test.Assert (assert, assert')
+import Test.Types (Fruit(..), IntList(..), Tree(..), TupleArray(..), UndefinedTest(..))
 
 buildTree :: forall a. (a -> TupleArray a a) -> Int -> a -> Tree a
 buildTree _ 0 a = Leaf a
@@ -93,10 +93,9 @@ testUnaryConstructorLiteral = do
 
 main :: Effect Unit
 main = do
-  testRoundTrip (RecordTest { foo: 1, bar: "test", baz: 'a' })
   testRoundTrip (Cons 1 (Cons 2 (Cons 3 Nil)))
-  testRoundTrip (UndefinedTest {a: Just "test"})
-  testRoundTrip (UndefinedTest {a: Nothing})
+  testRoundTrip (UndefinedTest (Just "test"))
+  testRoundTrip (UndefinedTest Nothing)
   testRoundTrip [Just "test"]
   testRoundTrip [Nothing :: Maybe String]
   testRoundTrip (Apple)
@@ -104,5 +103,3 @@ main = do
   testRoundTrip (makeTree 5)
   testRoundTrip (Object.fromFoldable [Tuple "one" 1, Tuple "two" 2])
   testUnaryConstructorLiteral
-  let opts = defaultOptions { fieldTransform = toUpper }
-  testGenericRoundTrip opts (RecordTest { foo: 1, bar: "test", baz: 'a' })

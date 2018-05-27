@@ -15,18 +15,17 @@
     "url": "git://github.com/paf31/purescript-foreign-generic.git"
   },
   "dependencies": {
-    "purescript-console": "#compiler/0.12",
-    "purescript-effect": "#compiler/0.12",
-    "purescript-exceptions": "#compiler/0.12",
-    "purescript-foreign": "#compiler/0.12",
-    "purescript-generics-rep": "#compiler/0.12",
-    "purescript-globals": "#compiler/0.12",
-    "purescript-nullable": "justinwoo/purescript-nullable#compiler/0.12",
-    "purescript-proxy": "#compiler/0.12",
-    "purescript-symbols": "#compiler/0.12",
-    "purescript-foreign-object": "#compiler/0.12"
+    "purescript-console": "^4.1.0",
+    "purescript-effect": "^2.0.0",
+    "purescript-exceptions": "^4.0.0",
+    "purescript-foreign": "^5.0.0",
+    "purescript-generics-rep": "^6.0.0",
+    "purescript-globals": "^4.0.0",
+    "purescript-nullable": "^4.0.0",
+    "purescript-proxy": "^3.0.0",
+    "purescript-foreign-object": "^1.0.0"
   },
   "devDependencies": {
-    "purescript-assert": "#compiler/0.12"
+    "purescript-assert": "^4.0.0"
   }
 }
