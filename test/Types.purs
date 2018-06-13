@@ -58,7 +58,7 @@ instance decodeRecordTest :: Decode RecordTest where
   decode x = genericDecode (defaultOptions { unwrapSingleConstructors = true }) x
 
 instance encodeRecordTest :: Encode RecordTest where
-  encode x = unsafePartial (crashWith "Implement me with RowList") -- TODO: genericEncode (defaultOptions { unwrapSingleConstructors = true }) x
+  encode x = genericEncode (defaultOptions { unwrapSingleConstructors = true }) x
 
 -- | An example of an ADT with nullary constructors
 data IntList = Nil | Cons Int IntList

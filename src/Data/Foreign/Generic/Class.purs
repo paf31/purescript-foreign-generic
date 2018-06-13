@@ -17,6 +17,7 @@ import Foreign (F, Foreign, ForeignError(..), fail, readArray, readString, unsaf
 import Foreign.Index (index)
 import Prim.Row as Row
 import Prim.RowList (class RowToList, Cons, Nil, kind RowList)
+import Record (get)
 import Record.Builder (Builder)
 import Record.Builder as Builder
 import Type.Data.RowList (RLProxy(..))
@@ -40,6 +41,10 @@ class GenericDecodeRowList (rl :: RowList) (from :: #Type) (to :: #Type) | rl ->
 
 class GenericEncodeArgs a where
   encodeArgs :: Options -> a -> List Foreign
+
+class GenericEncodeRowList (rl :: RowList) (row :: #Type) | rl -> row where
+  encodeRecord :: forall g . g rl -> Options -> Record row -> M.Map String Foreign
+
 
 class GenericDecodeFields a where
   decodeFields :: Options -> Foreign -> F a
@@ -136,7 +141,7 @@ instance genericDecodeArgsNoArguments :: GenericDecodeArgs NoArguments where
 instance genericEncodeArgsNoArguments :: GenericEncodeArgs NoArguments where
   encodeArgs _ = mempty
 
-instance genericDeocodeArgsRecordArgument
+instance genericDecodeArgsRecordArgument
   :: ( RowToList row rl
      , GenericDecodeRowList rl () row
   ) => GenericDecodeArgs (Argument (Record row)) where
@@ -163,8 +168,16 @@ mFail i err =
   maybe (fail (ErrorAtIndex i (ForeignError err))) pure
 
 
+instance genericEncodeArgsRecordArgument
+  :: ( RowToList row rl
+     , GenericEncodeRowList rl row
+  ) => GenericEncodeArgs (Argument (Record row)) where
+  encodeArgs opts (Argument rec) =
+    let fields = encodeRecord rlp opts rec
+    in singleton (unsafeToForeign fields)
+    where rlp = RLProxy :: RLProxy rl 
 
-instance genericEncodeArgsArgument
+else instance genericEncodeArgsArgument
   :: Encode a
   => GenericEncodeArgs (Argument a) where
   encodeArgs _ (Argument a) = singleton (encode a)
@@ -182,19 +195,9 @@ instance genericEncodeArgsProduct
   => GenericEncodeArgs (Product a b) where
   encodeArgs opts (Product a b) = encodeArgs opts a <> encodeArgs opts b
 
--- TODO: Replace with RowList
-
-{- 
-instance genericEncodeArgsRec
-  :: GenericEncodeFields fields
-  => GenericEncodeArgs (Rec fields) where
-  encodeArgs opts (Rec fs) = singleton (toForeign (encodeFields opts fs))
-
- -}
 
 instance genericDecodeRowListNil :: GenericDecodeRowList Nil () () where
   decodeRecord _ _ _ = pure identity
-
 
 instance genericDecodeRowListCons
   :: ( Decode a
@@ -218,15 +221,24 @@ instance genericDecodeRowListCons
       name = reflectSymbol namep
 
 
-{- 
+instance genericEncodeRowListNil :: GenericEncodeRowList Nil row where
+  encodeRecord _ _ _ = M.empty
 
-instance genericEncodeFieldsField
-  :: (IsSymbol name, Encode a)
-  => GenericEncodeFields (Field name a) where
-  encodeFields opts (Field a) =
-    let name = opts.fieldTransform $ reflectSymbol (SProxy :: SProxy name)
-    in S.singleton name (encode a)
- -}
+instance genericEncodeRowListcons
+  :: ( Encode a
+     , IsSymbol name
+     , GenericEncodeRowList tail row
+     , Row.Cons name a ignore row
+  ) => GenericEncodeRowList (Cons name a tail) row where
+  encodeRecord _ opts rec =
+    let fieldName = opts.fieldTransform $ reflectSymbol namep
+        fieldValue = encode value
+        rest = encodeRecord tailp opts rec
+    in M.insert fieldName fieldValue rest
+    where
+      namep = SProxy :: SProxy name
+      value = get namep rec
+      tailp = RLProxy :: RLProxy tail
 
 instance genericDecodeFieldsProduct
   :: (GenericDecodeFields a, GenericDecodeFields b)
@@ -253,9 +265,3 @@ instance genericCountArgsProduct
       Left _ , Right n -> Right n
       Right n, Left _  -> Right n
       Right n, Right m -> Right (n + m)
-
--- TODO: Replace with RowList
-
-{- instance genericCountArgsRec :: GenericCountArgs (Rec fields) where
-  countArgs _ = Right 1
- -}
