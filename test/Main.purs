@@ -42,10 +42,13 @@ testRoundTrip
   -> Effect Unit
 testRoundTrip x = do
   let json = encodeJSON x
-  log json
+  log $ "encoded: " <> json
   case runExcept (decodeJSON json) of
-    Right y -> assert (x == y)
+    Right y -> do
+      log "OK"
+      assert (x == y)
     Left err -> throw (show err)
+  log ""
 
 testGenericRoundTrip
   :: ∀ a r
@@ -75,10 +78,14 @@ testOption
   -> Effect Unit
 testOption options string value = do
   let json = unsafeStringify $ genericEncodeEnum options value
-  log json
+  log $ "encoded: " <> json
   case runExcept $ Tuple <$> decode' json <*> decode' string of
-    Right (Tuple x y) -> assert (value == y && value == x)
-    Left err -> throw (show err)
+    Right (Tuple x y) -> do
+      assert (value == y && value == x)
+      log "OK"
+    Left err -> 
+      throw (show err)
+  log ""
   where
     decode' = genericDecodeEnum options <=< parseJSON
 
@@ -93,16 +100,39 @@ testUnaryConstructorLiteral = do
 
 main :: Effect Unit
 main = do
-  testRoundTrip (RecordTest { foo: 1, bar: "test", baz: 'a' })
-  testRoundTrip (Cons 1 (Cons 2 (Cons 3 Nil)))
-  testRoundTrip (UndefinedTest {a: Just "test"})
-  testRoundTrip (UndefinedTest {a: Nothing})
-  testRoundTrip [Just "test"]
-  testRoundTrip [Nothing :: Maybe String]
+  log "testing Apple.."
   testRoundTrip (Apple)
-  testRoundTrip (makeTree 0)
-  testRoundTrip (makeTree 5)
-  testRoundTrip (Map.fromFoldable [Tuple "one" 1, Tuple "two" 2])
+
+  log "testing Just.."
+  testRoundTrip [Just "test"]
+
+  log "testing Nothing.."
+  testRoundTrip [Nothing :: Maybe String]
+
+  log "testing constructor literal .."
   testUnaryConstructorLiteral
+
+  log "testing RecordTest.."
+  testRoundTrip (RecordTest { foo: 1, bar: "test", baz: 'a' })
+
+  log "testing Undefined Just.."
+  testRoundTrip (UndefinedTest {a: Just "test"})
+
+  log "testing Undefined Nothing.."
+  testRoundTrip (UndefinedTest {a: Nothing})
+
+  log "testing Cons.."
+  testRoundTrip (Cons 1 (Cons 2 (Cons 3 Nil)))
+
+  log "testing empty Tree .."
+  testRoundTrip (makeTree 0)
+
+  log "testing tree 5 items .."
+  testRoundTrip (makeTree 5)
+
+  log "testing map.."
+  testRoundTrip (Map.fromFoldable [Tuple "one" 1, Tuple "two" 2])
+
+  log "testing Record with fieldTransform .."
   let opts = defaultOptions { fieldTransform = toUpper }
   testGenericRoundTrip opts (RecordTest { foo: 1, bar: "test", baz: 'a' })
