@@ -6,8 +6,10 @@ import Control.Alt ((<|>))
 import Control.Monad.Except (mapExcept)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
+import Data.FoldableWithIndex (foldlWithIndex)
 import Data.Foreign.Class (class Encode, class Decode, encode, decode)
 import Data.Foreign.Generic.Types (Options, SumEncoding(..))
+import Data.Foreign.JSON (addToObj)
 import Data.Generic.Rep (Argument(..), Constructor(..), NoArguments(..), NoConstructors, Product(..), Sum(..))
 import Data.List (List(..), fromFoldable, null, singleton, toUnfoldable, (:))
 import Data.Map as M
@@ -22,7 +24,6 @@ import Record.Builder (Builder)
 import Record.Builder as Builder
 import Type.Data.RowList (RLProxy(..))
 import Type.Proxy (Proxy(..))
-
 
 class GenericDecode a where
   decodeOpts :: Options -> Foreign -> F a
@@ -99,7 +100,7 @@ instance genericEncodeConstructor
         then maybe (unsafeToForeign {}) unsafeToForeign (encodeArgsArray args)
         else case opts.sumEncoding of
                TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } ->
-                 unsafeToForeign (M.singleton tagFieldName (unsafeToForeign $ constructorTagTransform ctorName)
+                 mapToObj (M.singleton tagFieldName (unsafeToForeign $ constructorTagTransform ctorName)
                            `M.union` maybe M.empty (M.singleton contentsFieldName) (encodeArgsArray args))
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
@@ -167,7 +168,7 @@ instance genericEncodeArgsRecordArgument
   ) => GenericEncodeArgs (Argument (Record row)) where
   encodeArgs opts (Argument rec) =
     let fields = encodeRecord rlp opts rec
-    in singleton (unsafeToForeign fields)
+    in singleton (mapToObj fields)
     where rlp = RLProxy :: RLProxy rl 
 
 else instance genericEncodeArgsArgument
@@ -217,7 +218,7 @@ instance genericDecodeRowListCons
 instance genericEncodeRowListNil :: GenericEncodeRowList Nil row where
   encodeRecord _ _ _ = M.empty
 
-instance genericEncodeRowListcons
+instance genericEncodeRowListCons
   :: ( Encode a
      , IsSymbol name
      , GenericEncodeRowList tail row
@@ -227,7 +228,8 @@ instance genericEncodeRowListcons
     let fieldName = opts.fieldTransform $ reflectSymbol namep
         fieldValue = encode value
         rest = encodeRecord tailp opts rec
-    in M.insert fieldName fieldValue rest
+    in 
+      M.insert fieldName fieldValue rest
     where
       namep = SProxy :: SProxy name
       value = get namep rec
@@ -248,3 +250,8 @@ instance genericCountArgsProduct
       Left _ , Right n -> Right n
       Right n, Left _  -> Right n
       Right n, Right m -> Right (n + m)
+
+
+mapToObj :: M.Map String Foreign -> Foreign
+mapToObj =
+  foldlWithIndex (\field obj value -> addToObj field value obj) (unsafeToForeign {})
