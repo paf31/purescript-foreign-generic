@@ -2,8 +2,10 @@ module Data.Foreign.Internal where
 
 import Prelude
 
-import Data.Foreign (F, Foreign, ForeignError(..), fail, tagOf, unsafeFromForeign)
-import Data.StrMap (StrMap)
+import Foreign (F, Foreign, ForeignError(..), fail, tagOf, unsafeFromForeign)
+import Data.Map (Map)
+
+type StrMap a = Map String a
 
 -- | Test whether a foreign value is a dictionary
 isStrMap :: Foreign -> Boolean

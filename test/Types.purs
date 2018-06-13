@@ -3,7 +3,6 @@ module Test.Types where
 import Prelude
 
 import Data.Bifunctor (class Bifunctor)
-import Data.Foreign (ForeignError(ForeignError), fail, readArray, toForeign)
 import Data.Foreign.Class (class Encode, class Decode, encode, decode)
 import Data.Foreign.Generic (defaultOptions, genericDecode, genericEncode)
 import Data.Foreign.Generic.EnumEncoding (defaultGenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
@@ -11,8 +10,9 @@ import Data.Foreign.Generic.Types (Options, SumEncoding(..))
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe)
 import Data.Tuple (Tuple(..))
+import Foreign (ForeignError(ForeignError), fail, readArray, unsafeToForeign)
 
 newtype TupleArray a b = TupleArray (Tuple a b)
 
@@ -34,7 +34,7 @@ instance decodeTupleArray :: (Decode a, Decode b) => Decode (TupleArray a b) whe
       _ -> fail (ForeignError "Expected two array elements")
 
 instance encodeTupleArray :: (Encode a, Encode b) => Encode (TupleArray a b) where
-  encode (TupleArray (Tuple a b)) = toForeign [encode a, encode b]
+  encode (TupleArray (Tuple a b)) = unsafeToForeign [encode a, encode b]
 
 -- | An example record
 newtype RecordTest = RecordTest
