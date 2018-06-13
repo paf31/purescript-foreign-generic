@@ -12,7 +12,6 @@ import Data.Foreign.Generic.EnumEncoding (class GenericDecodeEnum, class Generic
 import Data.Foreign.Generic.Types (Options)
 import Data.Foreign.JSON (parseJSON)
 import Data.Generic.Rep (class Generic)
-import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.String (toLower, toUpper)
 import Data.Tuple (Tuple(..))
