@@ -45,13 +45,6 @@ class GenericEncodeArgs a where
 class GenericEncodeRowList (rl :: RowList) (row :: #Type) | rl -> row where
   encodeRecord :: forall g . g rl -> Options -> Record row -> M.Map String Foreign
 
-
-class GenericDecodeFields a where
-  decodeFields :: Options -> Foreign -> F a
-
-class GenericEncodeFields a where
-  encodeFields :: Options -> a -> M.Map String Foreign
-
 class GenericCountArgs a where
   countArgs :: Proxy a -> Either a Int
 
@@ -239,16 +232,6 @@ instance genericEncodeRowListcons
       namep = SProxy :: SProxy name
       value = get namep rec
       tailp = RLProxy :: RLProxy tail
-
-instance genericDecodeFieldsProduct
-  :: (GenericDecodeFields a, GenericDecodeFields b)
-  => GenericDecodeFields (Product a b) where
-  decodeFields opts x = Product <$> decodeFields opts x <*> decodeFields opts x
-
-instance genericEncodeFieldsProduct
-  :: (GenericEncodeFields a, GenericEncodeFields b)
-  => GenericEncodeFields (Product a b) where
-  encodeFields opts (Product a b) = encodeFields opts a `M.union` encodeFields opts b
 
 instance genericCountArgsNoArguments :: GenericCountArgs NoArguments where
   countArgs _ = Left NoArguments
