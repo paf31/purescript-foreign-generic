@@ -6,16 +6,22 @@ import Control.Alt ((<|>))
 import Control.Monad.Except (mapExcept)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Foreign (F, Foreign, ForeignError(..), fail, readArray, readString, unsafeToForeign)
 import Data.Foreign.Class (class Encode, class Decode, encode, decode)
 import Data.Foreign.Generic.Types (Options, SumEncoding(..))
-import Foreign.Index (index)
 import Data.Generic.Rep (Argument(..), Constructor(..), NoArguments(..), NoConstructors, Product(..), Sum(..))
 import Data.List (List(..), fromFoldable, null, singleton, toUnfoldable, (:))
-import Data.Maybe (Maybe(..), maybe)
 import Data.Map as M
+import Data.Maybe (Maybe(..), maybe)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
+import Foreign (F, Foreign, ForeignError(..), fail, readArray, readString, unsafeToForeign)
+import Foreign.Index (index)
+import Prim.Row as Row
+import Prim.RowList (class RowToList, Cons, Nil, kind RowList)
+import Record.Builder (Builder)
+import Record.Builder as Builder
+import Type.Data.RowList (RLProxy(..))
 import Type.Proxy (Proxy(..))
+
 
 class GenericDecode a where
   decodeOpts :: Options -> Foreign -> F a
@@ -28,6 +34,9 @@ class GenericDecodeArgs a where
                                                     , rest :: List Foreign
                                                     , next :: Int
                                                     }
+
+class GenericDecodeRowList (rl :: RowList) (from :: #Type) (to :: #Type) | rl -> from to where
+  decodeRecord :: forall g . g rl -> Options -> Foreign -> F (Builder (Record from) (Record to))                                                    
 
 class GenericEncodeArgs a where
   encodeArgs :: Options -> a -> List Foreign
@@ -127,13 +136,33 @@ instance genericDecodeArgsNoArguments :: GenericDecodeArgs NoArguments where
 instance genericEncodeArgsNoArguments :: GenericEncodeArgs NoArguments where
   encodeArgs _ = mempty
 
-instance genericDecodeArgsArgument
+instance genericDeocodeArgsRecordArgument
+  :: ( RowToList row rl
+     , GenericDecodeRowList rl () row
+  ) => GenericDecodeArgs (Argument (Record row)) where
+  decodeArgs opts i (x:xs) = do
+    steps <- decodeRecord rlp opts x
+    let recArg = Argument $ Builder.build steps {}
+    pure { result: recArg, rest: xs, next: i + 1 }
+    where rlp :: RLProxy rl
+          rlp = RLProxy
+  decodeArgs _ _ _ = fail (ForeignError "Not enough constructor arguments")
+    
+
+else instance genericDecodeArgsArgument
   :: Decode a
   => GenericDecodeArgs (Argument a) where
   decodeArgs _ i (x : xs) = do
     a <- mapExcept (lmap (map (ErrorAtIndex i))) (decode x)
     pure { result: Argument a, rest: xs, next: i + 1 }
   decodeArgs _ _ _ = fail (ForeignError "Not enough constructor arguments")
+
+
+mFail :: forall a . Int -> String -> Maybe a -> F a
+mFail i err =
+  maybe (fail (ErrorAtIndex i (ForeignError err))) pure
+
+
 
 instance genericEncodeArgsArgument
   :: Encode a
@@ -155,26 +184,41 @@ instance genericEncodeArgsProduct
 
 -- TODO: Replace with RowList
 
-{- instance genericDecodeArgsRec
-  :: GenericDecodeFields fields
-  => GenericDecodeArgs (Rec fields) where
-  decodeArgs opts i (x : xs) = do
-    fields <- mapExcept (lmap (map (ErrorAtIndex i))) (decodeFields opts x)
-    pure { result: Rec fields, rest: xs, next: i + 1 }
-  decodeArgs _ _ _ = fail (ForeignError "Not enough constructor arguments")
-
+{- 
 instance genericEncodeArgsRec
   :: GenericEncodeFields fields
   => GenericEncodeArgs (Rec fields) where
   encodeArgs opts (Rec fs) = singleton (toForeign (encodeFields opts fs))
 
-instance genericDecodeFieldsField
-  :: (IsSymbol name, Decode a)
-  => GenericDecodeFields (Field name a) where
-  decodeFields opts x = do
-    let name = opts.fieldTransform $ reflectSymbol (SProxy :: SProxy name)
+ -}
+
+instance genericDecodeRowListNil :: GenericDecodeRowList Nil () () where
+  decodeRecord _ _ _ = pure identity
+
+
+instance genericDecodeRowListCons
+  :: ( Decode a
+     , IsSymbol name
+     , GenericDecodeRowList tail from from'
+     , Row.Lacks name from'
+     , Row.Cons name a from' to
+  ) => GenericDecodeRowList (Cons name a tail) from to where
+  decodeRecord _ opts x = do
+    let fieldName = opts.fieldTransform $ reflectSymbol namep
     -- If `name` field doesn't exist, then `y` will be `undefined`.
-    Field <$> (index x name >>= mapExcept (lmap (map (ErrorAtProperty name))) <<< decode)
+    fieldValue <- index x name >>= mapExcept (lmap (map (ErrorAtProperty fieldName))) <<< decode
+    rest <- decodeRecord tailp opts x
+    let
+      first :: Builder (Record from') (Record to)
+      first = Builder.insert namep fieldValue
+    pure $ first <<< rest
+    where
+      namep = SProxy :: SProxy name
+      tailp = RLProxy :: RLProxy tail
+      name = reflectSymbol namep
+
+
+{- 
 
 instance genericEncodeFieldsField
   :: (IsSymbol name, Encode a)
@@ -183,6 +227,7 @@ instance genericEncodeFieldsField
     let name = opts.fieldTransform $ reflectSymbol (SProxy :: SProxy name)
     in S.singleton name (encode a)
  -}
+
 instance genericDecodeFieldsProduct
   :: (GenericDecodeFields a, GenericDecodeFields b)
   => GenericDecodeFields (Product a b) where

@@ -24,6 +24,7 @@
     "purescript-globals": "^4.0.0",
     "purescript-nullable": "7240560f96576e93a82a51758e6985748a519a82",
     "purescript-proxy": "^3.0.0",
+    "purescript-record": "^1.0.0",
     "purescript-symbols": "78f37303898a36b562e1b0d8a35d4d58cfe039ef",
     "purescript-ordered-collections": "^1.0.0"
   },

@@ -55,7 +55,7 @@ instance eqRecordTest :: Eq RecordTest where
   eq x y = genericEq x y
 
 instance decodeRecordTest :: Decode RecordTest where
-  decode x = unsafePartial (crashWith "Implement me with RowList") -- TODO: genericDecode (defaultOptions { unwrapSingleConstructors = true }) x
+  decode x = genericDecode (defaultOptions { unwrapSingleConstructors = true }) x
 
 instance encodeRecordTest :: Encode RecordTest where
   encode x = unsafePartial (crashWith "Implement me with RowList") -- TODO: genericEncode (defaultOptions { unwrapSingleConstructors = true }) x
