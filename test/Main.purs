@@ -137,6 +137,3 @@ main = do
   log "testing Record with fieldTransform .."
   let opts = defaultOptions { fieldTransform = toUpper }
   testGenericRoundTrip opts (RecordTest { foo: 1, bar: "test", baz: 'a' })
-
-  log "testing map.."
-  testRoundTrip (Map.fromFoldable [Tuple "one" 1, Tuple "two" 2])
