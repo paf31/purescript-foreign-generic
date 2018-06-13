@@ -203,7 +203,7 @@ instance genericDecodeRowListCons
   decodeRecord _ opts x = do
     let fieldName = opts.fieldTransform $ reflectSymbol namep
     -- If `name` field doesn't exist, then `y` will be `undefined`.
-    fieldValue <- index x name >>= mapExcept (lmap (map (ErrorAtProperty fieldName))) <<< decode
+    fieldValue <- index x fieldName >>= mapExcept (lmap (map (ErrorAtProperty fieldName))) <<< decode
     rest <- decodeRecord tailp opts x
     let
       first :: Builder (Record from') (Record to)

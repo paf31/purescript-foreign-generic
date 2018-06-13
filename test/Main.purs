@@ -61,10 +61,14 @@ testGenericRoundTrip
   -> Effect Unit
 testGenericRoundTrip opts x = do
   let json = genericEncodeJSON opts x
-  log json
+  log $ "encoded: " <> json
   case runExcept (genericDecodeJSON opts json) of
-    Right y -> assert (x == y)
-    Left err -> throw (show err)
+    Right y -> do
+      assert (x == y)
+      log "OK"
+    Left err -> 
+      throw (show err)
+  log ""
 
 testOption
   :: ∀ a rep
@@ -130,9 +134,9 @@ main = do
   log "testing tree 5 items .."
   testRoundTrip (makeTree 5)
 
-  log "testing map.."
-  testRoundTrip (Map.fromFoldable [Tuple "one" 1, Tuple "two" 2])
-
   log "testing Record with fieldTransform .."
   let opts = defaultOptions { fieldTransform = toUpper }
   testGenericRoundTrip opts (RecordTest { foo: 1, bar: "test", baz: 'a' })
+
+  log "testing map.."
+  testRoundTrip (Map.fromFoldable [Tuple "one" 1, Tuple "two" 2])
