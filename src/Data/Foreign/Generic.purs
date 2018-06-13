@@ -10,7 +10,7 @@ module Data.Foreign.Generic
 
 import Prelude
 
-import Data.Foreign (F, Foreign)
+import Foreign (F, Foreign)
 import Data.Foreign.Class (class Decode, class Encode, decode, encode)
 import Data.Foreign.Generic.Class (class GenericDecode, class GenericEncode, decodeOpts, encodeOpts)
 import Data.Foreign.Generic.Types (Options, SumEncoding(..))
@@ -31,11 +31,11 @@ defaultOptions =
       TaggedObject
         { tagFieldName: "tag"
         , contentsFieldName: "contents"
-        , constructorTagTransform: id
+        , constructorTagTransform: identity
         }
   , unwrapSingleConstructors: false
   , unwrapSingleArguments: true
-  , fieldTransform: id
+  , fieldTransform: identity
   }
 
 -- | Read a value which has a `Generic` type.

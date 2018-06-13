@@ -6,15 +6,14 @@ import Control.Alt ((<|>))
 import Control.Monad.Except (mapExcept)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.Foreign (F, Foreign, ForeignError(..), fail, readArray, readString, toForeign)
+import Foreign (F, Foreign, ForeignError(..), fail, readArray, readString, unsafeToForeign)
 import Data.Foreign.Class (class Encode, class Decode, encode, decode)
 import Data.Foreign.Generic.Types (Options, SumEncoding(..))
-import Data.Foreign.Index (index)
-import Data.Generic.Rep (Argument(..), Constructor(..), Field(..), NoArguments(..), NoConstructors, Product(..), Rec(..), Sum(..))
+import Foreign.Index (index)
+import Data.Generic.Rep (Argument(..), Constructor(..), NoArguments(..), NoConstructors, Product(..), Sum(..))
 import Data.List (List(..), fromFoldable, null, singleton, toUnfoldable, (:))
 import Data.Maybe (Maybe(..), maybe)
-import Data.Monoid (mempty)
-import Data.StrMap as S
+import Data.Map as M
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Type.Proxy (Proxy(..))
 
@@ -37,7 +36,7 @@ class GenericDecodeFields a where
   decodeFields :: Options -> Foreign -> F a
 
 class GenericEncodeFields a where
-  encodeFields :: Options -> a -> S.StrMap Foreign
+  encodeFields :: Options -> a -> M.Map String Foreign
 
 class GenericCountArgs a where
   countArgs :: Proxy a -> Either a Int
@@ -90,11 +89,11 @@ instance genericEncodeConstructor
   => GenericEncode (Constructor name rep) where
   encodeOpts opts (Constructor args) =
       if opts.unwrapSingleConstructors
-        then maybe (toForeign {}) toForeign (encodeArgsArray args)
+        then maybe (unsafeToForeign {}) unsafeToForeign (encodeArgsArray args)
         else case opts.sumEncoding of
                TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } ->
-                 toForeign (S.singleton tagFieldName (toForeign $ constructorTagTransform ctorName)
-                           `S.union` maybe S.empty (S.singleton contentsFieldName) (encodeArgsArray args))
+                 unsafeToForeign (M.singleton tagFieldName (unsafeToForeign $ constructorTagTransform ctorName)
+                           `M.union` maybe M.empty (M.singleton contentsFieldName) (encodeArgsArray args))
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
 
@@ -104,7 +103,7 @@ instance genericEncodeConstructor
       unwrapArguments :: Array Foreign -> Maybe Foreign
       unwrapArguments [] = Nothing
       unwrapArguments [x] | opts.unwrapSingleArguments = Just x
-      unwrapArguments xs = Just (toForeign xs)
+      unwrapArguments xs = Just (unsafeToForeign xs)
 
 instance genericDecodeSum
   :: (GenericDecode a, GenericDecode b)
@@ -154,7 +153,9 @@ instance genericEncodeArgsProduct
   => GenericEncodeArgs (Product a b) where
   encodeArgs opts (Product a b) = encodeArgs opts a <> encodeArgs opts b
 
-instance genericDecodeArgsRec
+-- TODO: Replace with RowList
+
+{- instance genericDecodeArgsRec
   :: GenericDecodeFields fields
   => GenericDecodeArgs (Rec fields) where
   decodeArgs opts i (x : xs) = do
@@ -181,7 +182,7 @@ instance genericEncodeFieldsField
   encodeFields opts (Field a) =
     let name = opts.fieldTransform $ reflectSymbol (SProxy :: SProxy name)
     in S.singleton name (encode a)
-
+ -}
 instance genericDecodeFieldsProduct
   :: (GenericDecodeFields a, GenericDecodeFields b)
   => GenericDecodeFields (Product a b) where
@@ -190,7 +191,7 @@ instance genericDecodeFieldsProduct
 instance genericEncodeFieldsProduct
   :: (GenericEncodeFields a, GenericEncodeFields b)
   => GenericEncodeFields (Product a b) where
-  encodeFields opts (Product a b) = encodeFields opts a `S.union` encodeFields opts b
+  encodeFields opts (Product a b) = encodeFields opts a `M.union` encodeFields opts b
 
 instance genericCountArgsNoArguments :: GenericCountArgs NoArguments where
   countArgs _ = Left NoArguments
@@ -208,5 +209,8 @@ instance genericCountArgsProduct
       Right n, Left _  -> Right n
       Right n, Right m -> Right (n + m)
 
-instance genericCountArgsRec :: GenericCountArgs (Rec fields) where
+-- TODO: Replace with RowList
+
+{- instance genericCountArgsRec :: GenericCountArgs (Rec fields) where
   countArgs _ = Right 1
+ -}
