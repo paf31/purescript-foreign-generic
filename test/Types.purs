@@ -3,16 +3,19 @@ module Test.Types where
 import Prelude
 
 import Data.Bifunctor (class Bifunctor)
-import Data.Foreign (ForeignError(ForeignError), fail, readArray, toForeign)
 import Data.Foreign.Class (class Encode, class Decode, encode, decode)
 import Data.Foreign.Generic (defaultOptions, genericDecode, genericEncode)
 import Data.Foreign.Generic.EnumEncoding (defaultGenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
 import Data.Foreign.Generic.Types (Options, SumEncoding(..))
+import Data.Foreign.NullOrUndefined (undefined)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
+import Foreign (ForeignError(ForeignError), fail, readArray, unsafeToForeign)
+import Partial (crash, crashWith)
+import Partial.Unsafe (unsafePartial)
 
 newtype TupleArray a b = TupleArray (Tuple a b)
 
@@ -34,7 +37,7 @@ instance decodeTupleArray :: (Decode a, Decode b) => Decode (TupleArray a b) whe
       _ -> fail (ForeignError "Expected two array elements")
 
 instance encodeTupleArray :: (Encode a, Encode b) => Encode (TupleArray a b) where
-  encode (TupleArray (Tuple a b)) = toForeign [encode a, encode b]
+  encode (TupleArray (Tuple a b)) = unsafeToForeign [encode a, encode b]
 
 -- | An example record
 newtype RecordTest = RecordTest
@@ -52,10 +55,10 @@ instance eqRecordTest :: Eq RecordTest where
   eq x y = genericEq x y
 
 instance decodeRecordTest :: Decode RecordTest where
-  decode x = genericDecode (defaultOptions { unwrapSingleConstructors = true }) x
+  decode x = unsafePartial (crashWith "Implement me with RowList") -- TODO: genericDecode (defaultOptions { unwrapSingleConstructors = true }) x
 
 instance encodeRecordTest :: Encode RecordTest where
-  encode x = genericEncode (defaultOptions { unwrapSingleConstructors = true }) x
+  encode x = unsafePartial (crashWith "Implement me with RowList") -- TODO: genericEncode (defaultOptions { unwrapSingleConstructors = true }) x
 
 -- | An example of an ADT with nullary constructors
 data IntList = Nil | Cons Int IntList
@@ -110,9 +113,9 @@ derive instance eqUT :: Eq UndefinedTest
 derive instance geUT :: Generic UndefinedTest _
 
 instance dUT :: Decode UndefinedTest where
-  decode = genericDecode $ defaultOptions
+  decode = unsafePartial (crashWith "Implement me with RowList") -- TODO: genericDecode $ defaultOptions
 instance eUT :: Encode UndefinedTest where
-  encode = genericEncode $ defaultOptions
+  encode = unsafePartial (crashWith "Implement me with RowList") -- TODO: genericEncode $ defaultOptions
 
 data Fruit
   = Apple
