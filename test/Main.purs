@@ -7,9 +7,9 @@ import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
 import Data.Foreign.Class (class Encode, class Decode)
 import Data.Foreign.Generic (decodeJSON, defaultOptions, encodeJSON, genericDecodeJSON, genericEncodeJSON)
-import Data.Foreign.Generic.Class (class GenericDecode, class GenericEncode, encodeFields)
+import Data.Foreign.Generic.Class (class GenericDecode, class GenericEncode)
 import Data.Foreign.Generic.EnumEncoding (class GenericDecodeEnum, class GenericEncodeEnum, GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
-import Data.Foreign.Generic.Types (Options, SumEncoding(..))
+import Data.Foreign.Generic.Types (Options)
 import Data.Foreign.JSON (parseJSON)
 import Data.Generic.Rep (class Generic)
 import Data.Map as Map
@@ -19,8 +19,6 @@ import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Console (log)
 import Global.Unsafe (unsafeStringify)
-import Partial (crashWith)
-import Partial.Unsafe (unsafePartial)
 import Test.Assert (assert, assert')
 import Test.Types (Fruit(..), IntList(..), RecordTest(..), Tree(..), TupleArray(..), UndefinedTest(..))
 
@@ -107,5 +105,4 @@ main = do
   testRoundTrip (Map.fromFoldable [Tuple "one" 1, Tuple "two" 2])
   testUnaryConstructorLiteral
   let opts = defaultOptions { fieldTransform = toUpper }
-  unsafePartial (crashWith "Implement me with RowList")
-  -- TODO testGenericRoundTrip opts (RecordTest { foo: 1, bar: "test", baz: 'a' })
+  testGenericRoundTrip opts (RecordTest { foo: 1, bar: "test", baz: 'a' })

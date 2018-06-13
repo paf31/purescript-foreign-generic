@@ -7,15 +7,12 @@ import Data.Foreign.Class (class Encode, class Decode, encode, decode)
 import Data.Foreign.Generic (defaultOptions, genericDecode, genericEncode)
 import Data.Foreign.Generic.EnumEncoding (defaultGenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
 import Data.Foreign.Generic.Types (Options, SumEncoding(..))
-import Data.Foreign.NullOrUndefined (undefined)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe)
 import Data.Tuple (Tuple(..))
 import Foreign (ForeignError(ForeignError), fail, readArray, unsafeToForeign)
-import Partial (crash, crashWith)
-import Partial.Unsafe (unsafePartial)
 
 newtype TupleArray a b = TupleArray (Tuple a b)
 
@@ -113,9 +110,9 @@ derive instance eqUT :: Eq UndefinedTest
 derive instance geUT :: Generic UndefinedTest _
 
 instance dUT :: Decode UndefinedTest where
-  decode = unsafePartial (crashWith "Implement me with RowList") -- TODO: genericDecode $ defaultOptions
+  decode = genericDecode $ defaultOptions
 instance eUT :: Encode UndefinedTest where
-  encode = unsafePartial (crashWith "Implement me with RowList") -- TODO: genericEncode $ defaultOptions
+  encode = genericEncode $ defaultOptions
 
 data Fruit
   = Apple

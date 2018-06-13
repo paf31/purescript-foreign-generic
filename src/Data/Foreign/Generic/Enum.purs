@@ -79,7 +79,12 @@ instance ctorNoArgsGenericDecodeEnum
     where
       ctorName = constructorTagTransform $ reflectSymbol (SProxy :: SProxy name)
 
-instance ctorArgumentGenericDecodeEnum
+instance ctorRecGenericDecodeEnum
+  :: Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")
+  => GenericDecodeEnum (Constructor name (Argument (Record a))) where
+  decodeEnum _ _ = unsafeCrashWith "unreachable decodeEnum was reached."
+
+else instance ctorArgumentGenericDecodeEnum
   :: Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")
   => GenericDecodeEnum (Constructor name (Argument a)) where
   decodeEnum _ _ = unsafeCrashWith "unreachable decodeEnum was reached."
@@ -89,13 +94,7 @@ instance ctorProductGenericDecodeEnum
   => GenericDecodeEnum (Constructor name (Product a b)) where
   decodeEnum _ _ = unsafeCrashWith "unreachable decodeEnum was reached."
 
--- TODO: replace with RowList
 
-{- instance ctorRecGenericDecodeEnum
-  :: Fail "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments."
-  => GenericDecodeEnum (Constructor name (Rec a)) where
-  decodeEnum _ _ = unsafeCrashWith "unreachable decodeEnum was reached."
- -}
 instance sumGenericEncodeEnum
   :: (GenericEncodeEnum a, GenericEncodeEnum b)
   => GenericEncodeEnum (Sum a b) where
@@ -109,7 +108,12 @@ instance ctorNoArgsGenericEncodeEnum
     where
       ctorName = constructorTagTransform $ reflectSymbol (SProxy :: SProxy name)
 
-instance ctorArgumentGenericEncodeEnum
+instance ctorRecGenericEncodeEnum
+  :: Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")
+  => GenericEncodeEnum (Constructor name (Argument (Record a))) where
+  encodeEnum _ _ = unsafeCrashWith "unreachable encodeEnum was reached."
+
+else instance ctorArgumentGenericEncodeEnum
   :: Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")
   => GenericEncodeEnum (Constructor name (Argument a)) where
   encodeEnum _ _ = unsafeCrashWith "unreachable encodeEnum was reached."
@@ -118,11 +122,3 @@ instance ctorProductGenericEncodeEnum
   :: Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")
   => GenericEncodeEnum (Constructor name (Product a b)) where
   encodeEnum _ _ = unsafeCrashWith "unreachable encodeEnum was reached."
-
--- TODO: replace with RowList
-
-{- instance ctorRecGenericEncodeEnum
-  :: Fail "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments."
-  => GenericEncodeEnum (Constructor name (Rec a)) where
-  encodeEnum _ _ = unsafeCrashWith "unreachable encodeEnum was reached."
- -}
