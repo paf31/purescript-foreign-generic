@@ -1,4 +1,4 @@
-## Module Data.Foreign.Generic.EnumEncoding
+## Module Foreign.Generic.EnumEncoding
 
 #### `GenericEnumOptions`
 
@@ -58,9 +58,8 @@ instance dFruit :: Decode Fruit where
 ``` purescript
 (GenericDecodeEnum a, GenericDecodeEnum b) => GenericDecodeEnum (Sum a b)
 (IsSymbol name) => GenericDecodeEnum (Constructor name NoArguments)
-(Fail "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.") => GenericDecodeEnum (Constructor name (Argument a))
-(Fail "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.") => GenericDecodeEnum (Constructor name (Product a b))
-(Fail "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.") => GenericDecodeEnum (Constructor name (Rec a))
+(Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")) => GenericDecodeEnum (Constructor name (Argument a))
+(Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")) => GenericDecodeEnum (Constructor name (Product a b))
 ```
 
 #### `GenericEncodeEnum`
@@ -76,9 +75,8 @@ A type class for type representations that can be used for encoding from an Enum
 ``` purescript
 (GenericEncodeEnum a, GenericEncodeEnum b) => GenericEncodeEnum (Sum a b)
 (IsSymbol name) => GenericEncodeEnum (Constructor name NoArguments)
-(Fail "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.") => GenericEncodeEnum (Constructor name (Argument a))
-(Fail "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.") => GenericEncodeEnum (Constructor name (Product a b))
-(Fail "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.") => GenericEncodeEnum (Constructor name (Rec a))
+(Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")) => GenericEncodeEnum (Constructor name (Argument a))
+(Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")) => GenericEncodeEnum (Constructor name (Product a b))
 ```
 
 

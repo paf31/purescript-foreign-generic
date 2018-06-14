@@ -1,4 +1,4 @@
-## Module Data.Foreign.Generic
+## Module Foreign.Generic
 
 #### `defaultOptions`
 
@@ -28,7 +28,7 @@ Read a value which has a `Generic` type.
 genericEncode :: forall a rep. Generic a rep => GenericEncode rep => Options -> a -> Foreign
 ```
 
-Generate a `Foreign` value compatible with the `readGeneric` function.
+Generate a `Foreign` value compatible with the `genericDecode` function.
 
 #### `decodeJSON`
 

@@ -1,16 +1,18 @@
-module Data.Foreign.Class where
+module Foreign.Class where
 
 import Prelude
+
 import Control.Monad.Except (except, mapExcept)
 import Data.Array ((..), zipWith, length)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.Foreign (F, Foreign, ForeignError(..), readArray, readBoolean, readChar, readInt, readNumber, readString, toForeign)
-import Data.Foreign.NullOrUndefined (readNullOrUndefined, undefined)
 import Data.Maybe (Maybe, maybe)
-import Data.StrMap as StrMap
 import Data.Traversable (sequence)
-import Data.Foreign.Internal (readStrMap)
+import Foreign (F, Foreign, ForeignError(..), readArray, readBoolean, readChar, readInt, readNumber, readString, unsafeToForeign)
+import Foreign.Internal (readObject)
+import Foreign.NullOrUndefined (readNullOrUndefined, undefined)
+import Foreign.Object (Object)
+import Foreign.Object as Object
 
 -- | The `Decode` class is used to generate decoding functions
 -- | of the form `Foreign -> F a` using `generics-rep` deriving.
@@ -65,8 +67,8 @@ instance arrayDecode :: Decode a => Decode (Array a) where
 instance maybeDecode :: Decode a => Decode (Maybe a) where
   decode = readNullOrUndefined decode
 
-instance strMapDecode :: (Decode v) => Decode (StrMap.StrMap v) where
-  decode = sequence <<< StrMap.mapWithKey (\_ -> decode) <=< readStrMap
+instance objectDecode :: Decode v => Decode (Object v) where
+  decode = sequence <<< Object.mapWithKey (\_ -> decode) <=< readObject
 
 -- | The `Encode` class is used to generate encoding functions
 -- | of the form `a -> Foreign` using `generics-rep` deriving.
@@ -90,31 +92,31 @@ instance voidEncode :: Encode Void where
   encode = absurd
 
 instance unitEncode :: Encode Unit where
-  encode _ = toForeign {}
+  encode _ = unsafeToForeign {}
 
 instance foreignEncode :: Encode Foreign where
-  encode = id
+  encode = identity
 
 instance stringEncode :: Encode String where
-  encode = toForeign
+  encode = unsafeToForeign
 
 instance charEncode :: Encode Char where
-  encode = toForeign
+  encode = unsafeToForeign
 
 instance booleanEncode :: Encode Boolean where
-  encode = toForeign
+  encode = unsafeToForeign
 
 instance numberEncode :: Encode Number where
-  encode = toForeign
+  encode = unsafeToForeign
 
 instance intEncode :: Encode Int where
-  encode = toForeign
+  encode = unsafeToForeign
 
 instance arrayEncode :: Encode a => Encode (Array a) where
-  encode = toForeign <<< map encode
+  encode = unsafeToForeign <<< map encode
 
 instance maybeEncode :: Encode a => Encode (Maybe a) where
   encode = maybe undefined encode
 
-instance strMapEncode :: Encode v => Encode (StrMap.StrMap v) where
-  encode = toForeign <<< StrMap.mapWithKey (\_ -> encode)
+instance objectEncode :: Encode v => Encode (Object v) where
+  encode = unsafeToForeign <<< Object.mapWithKey (\_ -> encode)
