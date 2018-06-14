@@ -13,4 +13,4 @@ isObject v = tagOf v == "Object"
 readObject :: Foreign -> F (Object Foreign)
 readObject value
   | isObject value = pure $ unsafeFromForeign value
-  | otherwise = fail $ TypeMismatch "StrMap" (tagOf value)
+  | otherwise = fail $ TypeMismatch "Object" (tagOf value)

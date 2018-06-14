@@ -4,7 +4,7 @@
 
 Generic deriving for `purescript-foreign`.
 
-- [Module Documentation](https://pursuit.purescript.org/packages/purescript-foreign-generic)
+- [Module Documentation](generated-docs/Foreign/Generic.md)
 - [Example](test/Main.purs)
 - [Further examples in this repo](https://github.com/justinwoo/purescript-howto-foreign-generic)
 

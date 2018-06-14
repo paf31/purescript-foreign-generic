@@ -67,7 +67,7 @@ instance arrayDecode :: Decode a => Decode (Array a) where
 instance maybeDecode :: Decode a => Decode (Maybe a) where
   decode = readNullOrUndefined decode
 
-instance strMapDecode :: Decode v => Decode (Object v) where
+instance objectDecode :: Decode v => Decode (Object v) where
   decode = sequence <<< Object.mapWithKey (\_ -> decode) <=< readObject
 
 -- | The `Encode` class is used to generate encoding functions
@@ -118,5 +118,5 @@ instance arrayEncode :: Encode a => Encode (Array a) where
 instance maybeEncode :: Encode a => Encode (Maybe a) where
   encode = maybe undefined encode
 
-instance strMapEncode :: Encode v => Encode (Object v) where
+instance objectEncode :: Encode v => Encode (Object v) where
   encode = unsafeToForeign <<< Object.mapWithKey (\_ -> encode)
