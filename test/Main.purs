@@ -6,16 +6,18 @@ import Control.Monad.Except (runExcept)
 import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), isNothing)
 import Data.String (toLower, toUpper)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Console (log)
-import Foreign.Class (class Encode, class Decode)
+import Foreign (isNull, unsafeToForeign)
+import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON, defaultOptions, encodeJSON, genericDecodeJSON, genericEncodeJSON)
 import Foreign.Generic.Class (class GenericDecode, class GenericEncode)
 import Foreign.Generic.EnumEncoding (class GenericDecodeEnum, class GenericEncodeEnum, GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
 import Foreign.Generic.Types (Options)
+import Foreign.Index (readProp)
 import Foreign.JSON (parseJSON)
 import Foreign.Object as Object
 import Global.Unsafe (unsafeStringify)
@@ -91,6 +93,38 @@ testUnaryConstructorLiteral = do
       { constructorTagTransform: f
       }
 
+-- Test that `Nothing` record fields, when encoded to JSON, are present and
+-- encoded as `null`
+testNothingToNull :: Effect Unit
+testNothingToNull =
+  let
+    json = encode (UndefinedTest {a: Nothing})
+  in do
+    log (encodeJSON json)
+    case runExcept (pure json >>= readProp "contents" >>= readProp "a") of
+      Right val ->
+        when (not (isNull val))
+          (throw ("property 'a' was not null; got: " <> encodeJSON val))
+      Left err ->
+        throw (show err)
+
+-- Test that `Maybe` fields which are not present in the JSON are decoded to
+-- `Nothing`
+testNothingFromMissing :: Effect Unit
+testNothingFromMissing =
+  let
+    json = unsafeToForeign
+            { tag: "UndefinedTest"
+            , contents: 0
+            }
+  in
+    case runExcept (decode json) of
+      Right (UndefinedTest x) ->
+        when (not (isNothing x.a))
+          (throw ("Expected Nothing, got: " <> show x.a))
+      Left err ->
+        throw (show err)
+
 main :: Effect Unit
 main = do
   testRoundTrip (RecordTest { foo: 1, bar: "test", baz: 'a' })
@@ -106,3 +140,5 @@ main = do
   testUnaryConstructorLiteral
   let opts = defaultOptions { fieldTransform = toUpper }
   testGenericRoundTrip opts (RecordTest { foo: 1, bar: "test", baz: 'a' })
+  testNothingToNull
+  testNothingFromMissing

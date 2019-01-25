@@ -10,7 +10,7 @@ import Data.Maybe (Maybe, maybe)
 import Data.Traversable (sequence)
 import Foreign (F, Foreign, ForeignError(..), readArray, readBoolean, readChar, readInt, readNumber, readString, unsafeToForeign)
 import Foreign.Internal (readObject)
-import Foreign.NullOrUndefined (readNullOrUndefined, undefined)
+import Foreign.NullOrUndefined (readNullOrUndefined, null)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 
@@ -116,7 +116,7 @@ instance arrayEncode :: Encode a => Encode (Array a) where
   encode = unsafeToForeign <<< map encode
 
 instance maybeEncode :: Encode a => Encode (Maybe a) where
-  encode = maybe undefined encode
+  encode = maybe null encode
 
 instance objectEncode :: Encode v => Encode (Object v) where
   encode = unsafeToForeign <<< Object.mapWithKey (\_ -> encode)
