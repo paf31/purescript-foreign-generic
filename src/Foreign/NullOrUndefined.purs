@@ -11,3 +11,5 @@ readNullOrUndefined _ value | isNull value || isUndefined value = pure Nothing
 readNullOrUndefined f value = Just <$> f value
 
 foreign import undefined :: Foreign
+
+foreign import null :: Foreign
