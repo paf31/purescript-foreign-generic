@@ -6,7 +6,9 @@ import Control.Monad.Except (except, mapExcept)
 import Data.Array ((..), zipWith, length)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
+import Data.Identity (Identity(..))
 import Data.Maybe (Maybe, maybe)
+import Data.Newtype (unwrap)
 import Data.Traversable (sequence)
 import Foreign (F, Foreign, ForeignError(..), readArray, readBoolean, readChar, readInt, readNumber, readString, unsafeToForeign)
 import Foreign.Internal (readObject)
@@ -55,6 +57,9 @@ instance numberDecode :: Decode Number where
 
 instance intDecode :: Decode Int where
   decode = readInt
+
+instance identityDecode :: Decode a => Decode (Identity a) where
+  decode = map Identity <<< decode
 
 instance arrayDecode :: Decode a => Decode (Array a) where
   decode = readArray >=> readElements where
@@ -111,6 +116,9 @@ instance numberEncode :: Encode Number where
 
 instance intEncode :: Encode Int where
   encode = unsafeToForeign
+
+instance identityEncode :: Encode a => Encode (Identity a) where
+  encode = encode <<< unwrap
 
 instance arrayEncode :: Encode a => Encode (Array a) where
   encode = unsafeToForeign <<< map encode

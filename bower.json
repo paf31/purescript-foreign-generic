@@ -22,7 +22,8 @@
     "purescript-ordered-collections": "^1.0.0",
     "purescript-proxy": "^3.0.0",
     "purescript-exceptions": "^4.0.0",
-    "purescript-record": "^1.0.0"
+    "purescript-record": "^1.0.0",
+    "purescript-identity": "^4.1.0"
   },
   "devDependencies": {
     "purescript-assert": "^4.0.0",
