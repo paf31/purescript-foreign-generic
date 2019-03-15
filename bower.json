@@ -17,12 +17,12 @@
   "dependencies": {
     "purescript-effect": "^2.0.0",
     "purescript-foreign": "^5.0.0",
-    "purescript-foreign-object": "^1.0.0",
+    "purescript-foreign-object": "^2.0.0",
     "purescript-generics-rep": "^6.0.0",
     "purescript-ordered-collections": "^1.0.0",
     "purescript-proxy": "^3.0.0",
     "purescript-exceptions": "^4.0.0",
-    "purescript-record": "^1.0.0",
+    "purescript-record": "^2.0.0",
     "purescript-identity": "^4.1.0"
   },
   "devDependencies": {
