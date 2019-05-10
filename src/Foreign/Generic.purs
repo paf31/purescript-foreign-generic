@@ -32,6 +32,7 @@ defaultOptions =
         { tagFieldName: "tag"
         , contentsFieldName: "contents"
         , constructorTagTransform: identity
+        , unwrapRecords: false
         }
   , unwrapSingleConstructors: false
   , unwrapSingleArguments: true

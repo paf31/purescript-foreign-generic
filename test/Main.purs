@@ -22,7 +22,7 @@ import Foreign.JSON (parseJSON)
 import Foreign.Object as Object
 import Global.Unsafe (unsafeStringify)
 import Test.Assert (assert, assert')
-import Test.Types (Fruit(..), IntList(..), RecordTest(..), Tree(..), TupleArray(..), UndefinedTest(..))
+import Test.Types (Fruit(..), IntList(..), RecordTest(..), Tree(..), TupleArray(..), UndefinedTest(..), SumWithRecord(..))
 
 buildTree :: forall a. (a -> TupleArray a a) -> Int -> a -> Tree a
 buildTree _ 0 a = Leaf a
@@ -128,6 +128,10 @@ testNothingFromMissing =
 main :: Effect Unit
 main = do
   testRoundTrip (RecordTest { foo: 1, bar: "test", baz: 'a' })
+  testRoundTrip NoArgs
+  testRoundTrip (SomeArg "some argument")
+  testRoundTrip (ManyArgs "fst" "snd")
+  testRoundTrip (RecordArgs { foo: 1, bar: "test", baz: 'a' })
   testRoundTrip (Cons 1 (Cons 2 (Cons 3 Nil)))
   testRoundTrip (UndefinedTest {a: Just "test"})
   testRoundTrip (UndefinedTest {a: Nothing})

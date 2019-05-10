@@ -15,4 +15,5 @@ data SumEncoding
     { tagFieldName :: String
     , contentsFieldName :: String
     , constructorTagTransform :: String -> String
+    , unwrapRecords :: Boolean
     }

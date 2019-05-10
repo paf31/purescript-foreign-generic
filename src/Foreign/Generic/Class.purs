@@ -10,10 +10,10 @@ import Data.Generic.Rep (Argument(..), Constructor(..), NoArguments(..), NoConst
 import Data.List (List(..), fromFoldable, null, singleton, toUnfoldable, (:))
 import Data.Maybe (Maybe(..), maybe)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
-import Foreign (F, Foreign, ForeignError(..), fail, readArray, readString, unsafeToForeign)
+import Foreign (F, Foreign, ForeignError(..), fail, isArray, readArray, readString, typeOf, unsafeFromForeign, unsafeToForeign)
 import Foreign.Class (class Encode, class Decode, encode, decode)
 import Foreign.Generic.Types (Options, SumEncoding(..))
-import Foreign.Index (index)
+import Foreign.Index (hasProperty, index)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import Prim.Row (class Cons, class Lacks)
@@ -56,7 +56,7 @@ instance genericDecodeConstructor
       if opts.unwrapSingleConstructors
         then Constructor <$> readArguments f
         else case opts.sumEncoding of
-               TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } -> do
+               TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform, unwrapRecords } -> do
                  tag <- mapExcept (lmap (map (ErrorAtProperty tagFieldName))) do
                    tag <- index f tagFieldName >>= readString
                    let expected = constructorTagTransform ctorName
@@ -64,12 +64,17 @@ instance genericDecodeConstructor
                      fail (ForeignError ("Expected " <> show expected <> " tag"))
                    pure tag
                  args <- mapExcept (lmap (map (ErrorAtProperty contentsFieldName)))
-                           (index f contentsFieldName >>= readArguments)
+                           ((contents unwrapRecords contentsFieldName f) >>= readArguments)
                  pure (Constructor args)
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
 
       numArgs = countArgs (Proxy :: Proxy rep)
+
+      contents :: Boolean -> String -> Foreign -> F Foreign
+      contents unwrapRecords contentsFieldName f'
+        | unwrapRecords && not (hasProperty contentsFieldName f') = pure f'
+        | otherwise = index f' contentsFieldName
 
       readArguments args =
         case numArgs of
@@ -95,9 +100,15 @@ instance genericEncodeConstructor
         else case opts.sumEncoding of
                TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } ->
                  unsafeToForeign (Object.singleton tagFieldName (unsafeToForeign $ constructorTagTransform ctorName)
-                           `Object.union` maybe Object.empty (Object.singleton contentsFieldName) (encodeArgsArray args))
+                           `Object.union` objectFromArgs opts.sumEncoding (encodeArgsArray args))
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
+
+      objectFromArgs :: SumEncoding -> Maybe Foreign -> Object Foreign
+      objectFromArgs _ Nothing = Object.empty
+      objectFromArgs (TaggedObject { contentsFieldName, unwrapRecords }) (Just f)
+        | typeOf f == "object" && not isArray f && unwrapRecords = unsafeFromForeign f
+        | otherwise = Object.singleton contentsFieldName f
 
       encodeArgsArray :: rep -> Maybe Foreign
       encodeArgsArray = unwrapArguments <<< toUnfoldable <<< encodeArgs opts
