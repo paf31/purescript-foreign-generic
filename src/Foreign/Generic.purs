@@ -1,5 +1,6 @@
 module Foreign.Generic
   ( defaultOptions
+  , aesonSumEncoding
   , genericDecode
   , genericEncode
   , decodeJSON
@@ -38,6 +39,15 @@ defaultOptions =
   , unwrapSingleArguments: true
   , fieldTransform: identity
   }
+
+-- | Aeson unwraps records, use this sum encoding with Aeson generated json
+aesonSumEncoding :: SumEncoding
+aesonSumEncoding = TaggedObject
+        { tagFieldName: "tag"
+        , contentsFieldName: "contents"
+        , constructorTagTransform: identity
+        , unwrapRecords: true
+        }
   
 -- | Read a value which has a `Generic` type.
 genericDecode
