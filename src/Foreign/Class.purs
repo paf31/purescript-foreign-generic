@@ -15,6 +15,36 @@ import Foreign.Internal (readObject)
 import Foreign.NullOrUndefined (readNullOrUndefined, null)
 import Foreign.Object (Object)
 import Foreign.Object as Object
+import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
+import Foreign.Index (index)
+import Record as Record
+import Record.Builder as Builder
+import Record.Builder (Builder)
+import Unsafe.Coerce (unsafeCoerce)
+import Prim.Row (class Cons, class Lacks)
+import Prim.RowList (class RowToList, Nil, Cons)
+import Type.Data.RowList (RLProxy(..))
+import Foreign.Generic.Types (Options, SumEncoding(..))
+
+-- | Default decoding/encoding options:
+-- |
+-- | - Represent sum types as records with `tag` and `contents` fields
+-- | - Unwrap single arguments
+-- | - Don't unwrap single constructors
+-- | - Use the constructor names as-is
+-- | - Use the field names as-is
+defaultOptions :: Options
+defaultOptions =
+  { sumEncoding:
+      TaggedObject
+        { tagFieldName: "tag"
+        , contentsFieldName: "contents"
+        , constructorTagTransform: identity
+        }
+  , unwrapSingleConstructors: false
+  , unwrapSingleArguments: true
+  , fieldTransform: identity
+  }
 
 -- | The `Decode` class is used to generate decoding functions
 -- | of the form `Foreign -> F a` using `generics-rep` deriving.
@@ -75,6 +105,10 @@ instance maybeDecode :: Decode a => Decode (Maybe a) where
 instance objectDecode :: Decode v => Decode (Object v) where
   decode = sequence <<< Object.mapWithKey (\_ -> decode) <=< readObject
 
+instance recordDecode :: (RowToList r rl, DecodeRecord r rl) => Decode (Record r) where
+  decode = decode_ defaultOptions
+
+
 -- | The `Encode` class is used to generate encoding functions
 -- | of the form `a -> Foreign` using `generics-rep` deriving.
 -- |
@@ -128,3 +162,64 @@ instance maybeEncode :: Encode a => Encode (Maybe a) where
 
 instance objectEncode :: Encode v => Encode (Object v) where
   encode = unsafeToForeign <<< Object.mapWithKey (\_ -> encode)
+
+instance recordEncode :: (RowToList r rl, EncodeRecord r rl) => Encode (Record r) where
+  encode = encode_ defaultOptions
+
+class Decode_ a where
+  decode_ :: Options -> Foreign -> F a
+
+class Encode_ a where
+  encode_ :: Options -> a -> Foreign
+
+instance decode_Record :: (RowToList r rl, DecodeRecord r rl) => Decode_ (Record r) where
+  decode_ opts = map (flip Builder.build {}) <$> decodeRecord_ (RLProxy :: RLProxy rl) opts
+else instance decode_Other :: Decode a => Decode_ a where
+  decode_ _ = decode
+
+instance encode_Record :: (RowToList r rl, EncodeRecord r rl) => Encode_ (Record r) where
+  encode_ opts = unsafeToForeign <<< encodeRecord_ (RLProxy :: RLProxy rl) opts
+else instance encode_Other :: Encode a => Encode_ a where
+  encode_ _ = encode
+
+class DecodeRecord r rl | rl -> r where
+  decodeRecord_ :: RLProxy rl -> Options -> Foreign -> F (Builder {} (Record r))
+
+class EncodeRecord r rl | rl -> r where
+  encodeRecord_ :: RLProxy rl -> Options -> Record r -> Object Foreign
+
+instance decodeRecordNil :: DecodeRecord () Nil where
+  decodeRecord_ _ _ _ = pure identity
+
+instance encodeRecordNil :: EncodeRecord () Nil where
+  encodeRecord_ _ _ _ = Object.empty
+
+instance decodeRecordCons
+    :: ( Cons l a r_ r
+       , DecodeRecord r_ rl_
+       , IsSymbol l
+       , Decode_ a
+       , Lacks l r_
+       )
+    => DecodeRecord r (Cons l a rl_)
+  where
+    decodeRecord_ _ opts f = do
+      builder <- decodeRecord_ (RLProxy :: RLProxy rl_) opts f
+      let l = reflectSymbol (SProxy :: SProxy l)
+          l_transformed = (opts.fieldTransform l)
+      f_ <- index f l_transformed
+      a <- mapExcept (lmap (map (ErrorAtProperty l_transformed))) (decode_ opts f_)
+      pure (builder >>> Builder.insert (SProxy :: SProxy l) a)
+
+instance encodeRecordCons
+    :: ( Cons l a r_ r
+       , EncodeRecord r_ rl_
+       , IsSymbol l
+       , Encode_ a
+       )
+    => EncodeRecord r (Cons l a rl_)
+  where
+    encodeRecord_ _ opts rec =
+      let obj = encodeRecord_ (RLProxy :: RLProxy rl_) opts (unsafeCoerce rec)
+          l = reflectSymbol (SProxy :: SProxy l)
+       in Object.insert (opts.fieldTransform l) (encode_ opts (Record.get (SProxy :: SProxy l) rec)) obj

@@ -4,8 +4,8 @@ import Prelude
 
 import Data.Bifunctor (class Bifunctor)
 import Foreign (ForeignError(..), fail, readArray, unsafeToForeign)
-import Foreign.Class (class Encode, class Decode, encode, decode)
-import Foreign.Generic (defaultOptions, genericDecode, genericEncode)
+import Foreign.Class (class Encode, class Decode, encode, decode, defaultOptions)
+import Foreign.Generic (genericDecode, genericEncode)
 import Foreign.Generic.EnumEncoding (defaultGenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
 import Foreign.Generic.Types (Options, SumEncoding(..))
 import Data.Generic.Rep (class Generic)
