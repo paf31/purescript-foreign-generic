@@ -11,7 +11,7 @@ import Data.List (List(..), fromFoldable, null, singleton, toUnfoldable, (:))
 import Data.Maybe (Maybe(..), maybe)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Foreign (F, Foreign, ForeignError(..), fail, readArray, readString, unsafeToForeign)
-import Foreign.Class (class Decode_, class Encode_, decode_, encode_)
+import Foreign.Class (class DecodeWithOptions, class EncodeWithOptions, decodeWithOptions, encodeWithOptions)
 import Foreign.Generic.Types (Options, SumEncoding(..))
 import Foreign.Index (index)
 import Foreign.Object as Object
@@ -122,17 +122,17 @@ instance genericEncodeArgsNoArguments :: GenericEncodeArgs NoArguments where
   encodeArgs _ = mempty
 
 instance genericDecodeArgsArgument
-  :: Decode_ a
+  :: DecodeWithOptions a
   => GenericDecodeArgs (Argument a) where
   decodeArgs opts i (x : xs) = do
-    a <- mapExcept (lmap (map (ErrorAtIndex i))) (decode_ opts x)
+    a <- mapExcept (lmap (map (ErrorAtIndex i))) (decodeWithOptions opts x)
     pure { result: Argument a, rest: xs, next: i + 1 }
   decodeArgs _ _ _ = fail (ForeignError "Not enough constructor arguments")
 
 instance genericEncodeArgsArgument
-  :: Encode_ a
+  :: EncodeWithOptions a
   => GenericEncodeArgs (Argument a) where
-  encodeArgs opts (Argument a) = singleton (encode_ opts a)
+  encodeArgs opts (Argument a) = singleton (encodeWithOptions opts a)
 
 instance genericDecodeArgsProduct
   :: (GenericDecodeArgs a, GenericDecodeArgs b)

@@ -1,19 +1,5 @@
 ## Module Foreign.Generic
 
-#### `defaultOptions`
-
-``` purescript
-defaultOptions :: Options
-```
-
-Default decoding/encoding options:
-
-- Represent sum types as records with `tag` and `contents` fields
-- Unwrap single arguments
-- Don't unwrap single constructors
-- Use the constructor names as-is
-- Use the field names as-is
-
 #### `genericDecode`
 
 ``` purescript

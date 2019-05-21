@@ -38,7 +38,7 @@ class GenericDecodeArgs a  where
 ##### Instances
 ``` purescript
 GenericDecodeArgs NoArguments
-(Decode_ a) => GenericDecodeArgs (Argument a)
+(DecodeWithOptions a) => GenericDecodeArgs (Argument a)
 (GenericDecodeArgs a, GenericDecodeArgs b) => GenericDecodeArgs (Product a b)
 ```
 
@@ -52,7 +52,7 @@ class GenericEncodeArgs a  where
 ##### Instances
 ``` purescript
 GenericEncodeArgs NoArguments
-(Encode_ a) => GenericEncodeArgs (Argument a)
+(EncodeWithOptions a) => GenericEncodeArgs (Argument a)
 (GenericEncodeArgs a, GenericEncodeArgs b) => GenericEncodeArgs (Product a b)
 ```
 
@@ -68,58 +68,6 @@ class GenericCountArgs a  where
 GenericCountArgs NoArguments
 GenericCountArgs (Argument a)
 (GenericCountArgs a, GenericCountArgs b) => GenericCountArgs (Product a b)
-```
-
-#### `Decode_`
-
-``` purescript
-class Decode_ a  where
-  decode_ :: Options -> Foreign -> F a
-```
-
-##### Instances
-``` purescript
-(RowToList r rl, DecodeRecord r rl) => Decode_ {  | r }
-(Decode a) => Decode_ a
-```
-
-#### `Encode_`
-
-``` purescript
-class Encode_ a  where
-  encode_ :: Options -> a -> Foreign
-```
-
-##### Instances
-``` purescript
-(RowToList r rl, EncodeRecord r rl) => Encode_ {  | r }
-(Encode a) => Encode_ a
-```
-
-#### `DecodeRecord`
-
-``` purescript
-class DecodeRecord r rl | rl -> r where
-  decodeRecord_ :: RLProxy rl -> Options -> Foreign -> F (Builder {  } ({  | r }))
-```
-
-##### Instances
-``` purescript
-DecodeRecord () Nil
-(Cons l a r_ r, DecodeRecord r_ rl_, IsSymbol l, Decode_ a, Lacks l r_) => DecodeRecord r (Cons l a rl_)
-```
-
-#### `EncodeRecord`
-
-``` purescript
-class EncodeRecord r rl | rl -> r where
-  encodeRecord_ :: RLProxy rl -> Options -> {  | r } -> Object Foreign
-```
-
-##### Instances
-``` purescript
-EncodeRecord () Nil
-(Cons l a r_ r, EncodeRecord r_ rl_, IsSymbol l, Encode_ a) => EncodeRecord r (Cons l a rl_)
 ```
 
 
