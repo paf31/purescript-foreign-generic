@@ -25,7 +25,7 @@ First, define some data type and derive `Generic`:
 To encode JSON, use `genericEncodeJSON`:
 
 ```purescript
-> import Foreign.Class (defaultOptions, genericEncodeJSON)
+> import Foreign.Generic (defaultOptions, genericEncodeJSON)
 
 > opts = defaultOptions { unwrapSingleConstructors = true }
 
@@ -37,7 +37,7 @@ And to decode JSON, use `genericDecodeJSON`:
 
 ```purescript
 > import Control.Monad.Except (runExcept)
-> import Foreign.Class (genericDecodeJSON)
+> import Foreign.Generic (genericDecodeJSON)
 
 > runExcept (genericDecodeJSON opts "{\"a\":1}" :: _ MyRecord)
 (Right (MyRecord { a: 1 }))
