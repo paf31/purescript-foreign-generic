@@ -1,5 +1,26 @@
 ## Module Foreign.Class
 
+#### `Options`
+
+``` purescript
+type Options = { sumEncoding :: SumEncoding, unwrapSingleConstructors :: Boolean, unwrapSingleArguments :: Boolean, fieldTransform :: String -> String }
+```
+
+Encoding/Decoding options which can be used to customize
+`Decode` and `Encode` instances which are derived via
+`Generic` (see `genericEncode` and `genericDecode`).
+
+#### `SumEncoding`
+
+``` purescript
+data SumEncoding
+  = TaggedObject { tagFieldName :: String, contentsFieldName :: String, constructorTagTransform :: String -> String }
+```
+
+The encoding of sum types for your type.
+`TaggedObject`s will be encoded in the form `{ [tagFieldName]: "ConstructorTag", [contentsFieldName]: "Contents"}`.
+`constructorTagTransform` can be provided to transform the constructor tag to a form you use, e.g. `toLower`/`toUpper`.
+
 #### `defaultOptions`
 
 ``` purescript
@@ -156,6 +177,124 @@ class EncodeRecord r rl | rl -> r where
 ``` purescript
 EncodeRecord () Nil
 (Cons l a r_ r, EncodeRecord r_ rl_, IsSymbol l, EncodeWithOptions a) => EncodeRecord r (Cons l a rl_)
+```
+
+#### `genericDecode`
+
+``` purescript
+genericDecode :: forall a rep. Generic a rep => GenericDecode rep => Options -> Foreign -> F a
+```
+
+Read a value which has a `Generic` type.
+
+#### `genericEncode`
+
+``` purescript
+genericEncode :: forall a rep. Generic a rep => GenericEncode rep => Options -> a -> Foreign
+```
+
+Generate a `Foreign` value compatible with the `genericDecode` function.
+
+#### `decodeJSON`
+
+``` purescript
+decodeJSON :: forall a. Decode a => String -> F a
+```
+
+Decode a JSON string using a `Decode` instance.
+
+#### `encodeJSON`
+
+``` purescript
+encodeJSON :: forall a. Encode a => a -> String
+```
+
+Encode a JSON string using an `Encode` instance.
+
+#### `genericDecodeJSON`
+
+``` purescript
+genericDecodeJSON :: forall a rep. Generic a rep => GenericDecode rep => Options -> String -> F a
+```
+
+Read a value which has a `Generic` type from a JSON String
+
+#### `genericEncodeJSON`
+
+``` purescript
+genericEncodeJSON :: forall a rep. Generic a rep => GenericEncode rep => Options -> a -> String
+```
+
+Write a value which has a `Generic` type as a JSON String
+
+#### `GenericDecode`
+
+``` purescript
+class GenericDecode a  where
+  decodeOpts :: Options -> Foreign -> F a
+```
+
+##### Instances
+``` purescript
+GenericDecode NoConstructors
+(IsSymbol name, GenericDecodeArgs rep, GenericCountArgs rep) => GenericDecode (Constructor name rep)
+(GenericDecode a, GenericDecode b) => GenericDecode (Sum a b)
+```
+
+#### `GenericEncode`
+
+``` purescript
+class GenericEncode a  where
+  encodeOpts :: Options -> a -> Foreign
+```
+
+##### Instances
+``` purescript
+GenericEncode NoConstructors
+(IsSymbol name, GenericEncodeArgs rep) => GenericEncode (Constructor name rep)
+(GenericEncode a, GenericEncode b) => GenericEncode (Sum a b)
+```
+
+#### `GenericDecodeArgs`
+
+``` purescript
+class GenericDecodeArgs a  where
+  decodeArgs :: Options -> Int -> List Foreign -> F { result :: a, rest :: List Foreign, next :: Int }
+```
+
+##### Instances
+``` purescript
+GenericDecodeArgs NoArguments
+(DecodeWithOptions a) => GenericDecodeArgs (Argument a)
+(GenericDecodeArgs a, GenericDecodeArgs b) => GenericDecodeArgs (Product a b)
+```
+
+#### `GenericEncodeArgs`
+
+``` purescript
+class GenericEncodeArgs a  where
+  encodeArgs :: Options -> a -> List Foreign
+```
+
+##### Instances
+``` purescript
+GenericEncodeArgs NoArguments
+(EncodeWithOptions a) => GenericEncodeArgs (Argument a)
+(GenericEncodeArgs a, GenericEncodeArgs b) => GenericEncodeArgs (Product a b)
+```
+
+#### `GenericCountArgs`
+
+``` purescript
+class GenericCountArgs a  where
+  countArgs :: Proxy a -> Either a Int
+```
+
+##### Instances
+``` purescript
+GenericCountArgs NoArguments
+GenericCountArgs (Argument a)
+(GenericCountArgs a, GenericCountArgs b) => GenericCountArgs (Product a b)
 ```
 
 
