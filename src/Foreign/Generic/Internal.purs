@@ -1,4 +1,4 @@
-module Foreign.Internal where
+module Foreign.Generic.Internal where
 
 import Prelude
 

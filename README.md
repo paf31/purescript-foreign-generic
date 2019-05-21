@@ -25,8 +25,7 @@ First, define some data type and derive `Generic`:
 To encode JSON, use `genericEncodeJSON`:
 
 ```purescript
-> import Foreign.Class (class Encode, class Decode, encode, decode)
-> import Foreign.Generic (defaultOptions, genericDecodeJSON, genericEncodeJSON)
+> import Foreign.Generic (defaultOptions, genericEncodeJSON)
 
 > opts = defaultOptions { unwrapSingleConstructors = true }
 
@@ -37,7 +36,8 @@ To encode JSON, use `genericEncodeJSON`:
 And to decode JSON, use `genericDecodeJSON`:
 
 ```purescript
-> import Control.Monad.Except
+> import Control.Monad.Except (runExcept)
+> import Foreign.Generic (genericDecodeJSON)
 
 > runExcept (genericDecodeJSON opts "{\"a\":1}" :: _ MyRecord)
 (Right (MyRecord { a: 1 }))
@@ -46,6 +46,9 @@ And to decode JSON, use `genericDecodeJSON`:
 Badly formed JSON will result in a useful error, which can be inspected or pretty-printed:
 
 ```purescript
+> import Data.Bifunctor (lmap)
+> import Foreign (renderForeignError)
+
 > lmap (map renderForeignError) $ runExcept (genericDecodeJSON opts "{\"a\":\"abc\"}" :: _ MyRecord)
 (Left
   (NonEmptyList

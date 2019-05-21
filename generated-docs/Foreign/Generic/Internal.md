@@ -1,4 +1,4 @@
-## Module Foreign.Internal
+## Module Foreign.Generic.Internal
 
 #### `isObject`
 

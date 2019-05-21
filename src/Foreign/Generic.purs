@@ -5,16 +5,17 @@ module Foreign.Generic
   , encodeJSON
   , genericDecodeJSON
   , genericEncodeJSON
+  , module Reexports
   ) where
 
 import Prelude
 
 import Data.Generic.Rep (class Generic, from, to)
 import Foreign (F, Foreign)
-import Foreign.Class (class Decode, class Encode, decode, encode)
-import Foreign.Generic.Class (class GenericDecode, class GenericEncode, decodeOpts, encodeOpts)
-import Foreign.Generic.Types (Options)
-import Foreign.JSON (parseJSON, decodeJSONWith)
+import Foreign (F, Foreign, ForeignError(..)) as Reexports
+import Foreign.Generic.Class (class Decode, class Encode, class GenericDecode, class GenericEncode, Options, decode, decodeOpts, encode, encodeOpts)
+import Foreign.Generic.Class (class Decode, class Encode, class GenericDecode, class GenericEncode, Options, SumEncoding(..), defaultOptions, decode, encode) as Reexports
+import Foreign.JSON (decodeJSONWith, parseJSON)
 import Global.Unsafe (unsafeStringify)
 
 -- | Read a value which has a `Generic` type.
