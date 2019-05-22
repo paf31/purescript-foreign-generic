@@ -1,5 +1,12 @@
 ## Module Foreign.Class
 
+This module is provided for backwards-compatibility with the old API.
+
+It is liable to be removed in a future release. 
+
+
+### Re-exported from Foreign.Generic.Class:
+
 #### `Decode`
 
 ``` purescript
@@ -33,9 +40,11 @@ Decode Char
 Decode Boolean
 Decode Number
 Decode Int
+(Decode a) => Decode (Identity a)
 (Decode a) => Decode (Array a)
 (Decode a) => Decode (Maybe a)
 (Decode v) => Decode (Object v)
+(RowToList r rl, DecodeRecord r rl) => Decode {  | r }
 ```
 
 #### `Encode`
@@ -71,9 +80,10 @@ Encode Char
 Encode Boolean
 Encode Number
 Encode Int
+(Encode a) => Encode (Identity a)
 (Encode a) => Encode (Array a)
 (Encode a) => Encode (Maybe a)
 (Encode v) => Encode (Object v)
+(RowToList r rl, EncodeRecord r rl) => Encode {  | r }
 ```
-
 

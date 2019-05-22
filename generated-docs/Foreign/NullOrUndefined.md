@@ -14,4 +14,10 @@ Read a value which may be null or undefined.
 undefined :: Foreign
 ```
 
+#### `null`
+
+``` purescript
+null :: Foreign
+```
+
 
