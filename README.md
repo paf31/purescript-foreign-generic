@@ -13,46 +13,46 @@ Generic deriving for `purescript-foreign`.
 First, define some data type and derive `Generic`:
 
 ```purescript
-> import Prelude
-> import Data.Generic.Rep (class Generic)
-> import Data.Generic.Rep.Show (genericShow)
+import Prelude
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Show (genericShow)
 
-> newtype MyRecord = MyRecord { a :: Int }
-> derive instance genericMyRecord :: Generic MyRecord _
-> instance showMyRecord :: Show MyRecord where show = genericShow
+newtype MyRecord = MyRecord { a :: Int }
+derive instance genericMyRecord :: Generic MyRecord _
+instance showMyRecord :: Show MyRecord where show = genericShow
 ```
 
 To encode JSON, use `genericEncodeJSON`:
 
 ```purescript
-> import Foreign.Generic (defaultOptions, genericEncodeJSON)
+import Foreign.Generic (defaultOptions, genericEncodeJSON)
 
-> opts = defaultOptions { unwrapSingleConstructors = true }
+opts = defaultOptions { unwrapSingleConstructors = true }
 
-> genericEncodeJSON opts (MyRecord { a: 1 })
-"{\"a\":1}"
+genericEncodeJSON opts (MyRecord { a: 1 })
+-- "{\"a\":1}"
 ```
 
 And to decode JSON, use `genericDecodeJSON`:
 
 ```purescript
-> import Control.Monad.Except (runExcept)
-> import Foreign.Generic (genericDecodeJSON)
+import Control.Monad.Except (runExcept)
+import Foreign.Generic (genericDecodeJSON)
 
-> runExcept (genericDecodeJSON opts "{\"a\":1}" :: _ MyRecord)
-(Right (MyRecord { a: 1 }))
+runExcept (genericDecodeJSON opts "{\"a\":1}" :: _ MyRecord)
+-- (Right (MyRecord { a: 1 }))
 ```
 
 Badly formed JSON will result in a useful error, which can be inspected or pretty-printed:
 
 ```purescript
-> import Data.Bifunctor (lmap)
-> import Foreign (renderForeignError)
+import Data.Bifunctor (lmap)
+import Foreign (renderForeignError)
 
-> lmap (map renderForeignError) $ runExcept (genericDecodeJSON opts "{\"a\":\"abc\"}" :: _ MyRecord)
-(Left
-  (NonEmptyList
-    (NonEmpty
-      "Error at array index 0: (ErrorAtProperty \"a\" (TypeMismatch \"Int\" \"String\"))"
-      Nil)))
+lmap (map renderForeignError) $ runExcept (genericDecodeJSON opts "{\"a\":\"abc\"}" :: _ MyRecord)
+-- (Left
+--   (NonEmptyList
+--     (NonEmpty
+--       "Error at array index 0: (ErrorAtProperty \"a\" (TypeMismatch \"Int\" \"String\"))"
+--       Nil)))
 ```
