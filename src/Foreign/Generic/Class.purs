@@ -11,6 +11,8 @@ import Data.Generic.Rep (Argument(..), Constructor(..), NoArguments(..), NoConst
 import Data.Identity (Identity(..))
 import Data.List (List(..), (:))
 import Data.List as List
+import Data.Map (Map)
+import Data.Map as Map
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
@@ -154,6 +156,11 @@ instance objectDecode :: Decode v => Decode (Object v) where
 instance recordDecode :: (RowToList r rl, DecodeRecord r rl) => Decode (Record r) where
   decode = decodeWithOptions defaultOptions
 
+instance mapDecode :: (Ord k, Decode k, Decode v) => Decode (Map k v) where
+  decode f = do
+    (tuple :: Array (Tuple k v)) <- decode f
+    pure $ Map.fromFoldable tuple
+
 -- | The `Encode` class is used to generate encoding functions
 -- | of the form `a -> Foreign` using `generics-rep` deriving.
 -- |
@@ -216,6 +223,9 @@ instance objectEncode :: Encode v => Encode (Object v) where
 
 instance recordEncode :: (RowToList r rl, EncodeRecord r rl) => Encode (Record r) where
   encode = encodeWithOptions defaultOptions
+
+instance mapEncode :: (Encode k, Encode v) => Encode (Map k v) where
+  encode m = encode (Map.toUnfoldable m :: Array _)
 
 -- | When deriving `En`/`Decode` instances using `Generic`, we want
 -- | the `Options` object to apply to the outermost record type(s)
