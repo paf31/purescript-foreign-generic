@@ -55,6 +55,38 @@ instance decodeRecordTest :: Decode RecordTest where
 instance encodeRecordTest :: Encode RecordTest where
   encode x = genericEncode (defaultOptions { unwrapSingleConstructors = true }) x
 
+-- | A sum type with record args
+data SumWithRecord
+  = NoArgs
+  | SomeArg String
+  | ManyArgs String String
+  | RecordArgs
+    { foo :: Int
+    , bar :: String
+    , baz :: Char
+    }
+
+derive instance genericSumWithRecord :: Generic SumWithRecord _
+
+instance showSumWithRecord :: Show SumWithRecord where
+  show x = genericShow x
+
+instance eqSumWithRecord :: Eq SumWithRecord where
+  eq x y = genericEq x y
+
+unwrapRecordsEncoding :: SumEncoding
+unwrapRecordsEncoding = TaggedObject { tagFieldName: "tag"
+                                     , contentsFieldName: "contents"
+                                     , constructorTagTransform: identity
+                                     , unwrapRecords: true
+                                     }
+
+instance decodeSumWithRecord :: Decode SumWithRecord where
+  decode x = genericDecode (defaultOptions { unwrapSingleConstructors = true, sumEncoding = unwrapRecordsEncoding }) x
+
+instance encodeSumWithRecord :: Encode SumWithRecord where
+  encode x = genericEncode (defaultOptions { unwrapSingleConstructors = true, sumEncoding = unwrapRecordsEncoding }) x
+
 -- | An example of an ADT with nullary constructors
 data IntList = Nil | Cons Int IntList
 
@@ -74,6 +106,7 @@ intListOptions =
                                                , constructorTagTransform: \tag -> case tag of
                                                                                     "Cons" -> "cOnS"
                                                                                     _ -> ""
+                                               , unwrapRecords: false
                                                }
                  }
 

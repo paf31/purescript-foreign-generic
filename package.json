@@ -3,6 +3,7 @@
   "scripts": {
     "clean": "rimraf output && rimraf .pulp-cache",
     "build": "pulp build -- --censor-lib --strict",
+    "purs:ide": "purs ide server --log-level=debug 'bower_components/purescript-*/src/**/*.purs' 'src/**/*.purs' 'test/**/*.purs'",
     "test": "pulp test"
   },
   "devDependencies": {
