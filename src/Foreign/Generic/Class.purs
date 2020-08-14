@@ -134,6 +134,9 @@ instance arrayDecode :: Decode a => Decode (Array a) where
     readElement :: Int -> Foreign -> F a
     readElement i value = mapExcept (lmap (map (ErrorAtIndex i))) (decode value)
 
+instance listDecode :: Decode a => Decode (List a) where
+  decode f = let (array :: F (Array a)) = decode f in List.fromFoldable <$> array
+
 instance maybeDecode :: Decode a => Decode (Maybe a) where
   decode = readNullOrUndefined decode
 
@@ -190,6 +193,9 @@ instance identityEncode :: Encode a => Encode (Identity a) where
 
 instance arrayEncode :: Encode a => Encode (Array a) where
   encode = unsafeToForeign <<< map encode
+
+instance listEncode :: Encode a => Encode (List a) where
+  encode f = let (arr :: Array a) = List.toUnfoldable f in encode arr
 
 instance maybeEncode :: Encode a => Encode (Maybe a) where
   encode = maybe null encode
