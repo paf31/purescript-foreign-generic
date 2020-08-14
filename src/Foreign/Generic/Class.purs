@@ -15,10 +15,10 @@ import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Data.Traversable (sequence)
-import Foreign (F, Foreign, ForeignError(..), fail, readArray, readBoolean, readChar, readInt, readNumber, readString, unsafeToForeign)
+import Foreign (F, Foreign, ForeignError(..), fail, typeOf, isArray, readArray, readBoolean, readChar, readInt, readNumber, readString, unsafeToForeign, unsafeFromForeign)
 import Foreign.Generic.Internal (readObject)
-import Foreign.Index (index)
 import Foreign.NullOrUndefined (readNullOrUndefined, null)
+import Foreign.Index (hasProperty, index)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import Prim.Row (class Cons, class Lacks)
@@ -48,6 +48,7 @@ data SumEncoding
     { tagFieldName :: String
     , contentsFieldName :: String
     , constructorTagTransform :: String -> String
+    , unwrapRecords :: Boolean
     }
 
 -- | Default decoding/encoding options:
@@ -64,11 +65,21 @@ defaultOptions =
         { tagFieldName: "tag"
         , contentsFieldName: "contents"
         , constructorTagTransform: identity
+        , unwrapRecords: false
         }
   , unwrapSingleConstructors: false
   , unwrapSingleArguments: true
   , fieldTransform: identity
   }
+
+-- | Aeson unwraps records, use this sum encoding with Aeson generated json
+aesonSumEncoding :: SumEncoding
+aesonSumEncoding = TaggedObject
+        { tagFieldName: "tag"
+        , contentsFieldName: "contents"
+        , constructorTagTransform: identity
+        , unwrapRecords: true
+        }
 
 -- | The `Decode` class is used to generate decoding functions
 -- | of the form `Foreign -> F a` using `generics-rep` deriving.
@@ -288,7 +299,7 @@ instance genericDecodeConstructor
       if opts.unwrapSingleConstructors
         then Constructor <$> readArguments f
         else case opts.sumEncoding of
-               TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } -> do
+               TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform, unwrapRecords } -> do
                  tag <- mapExcept (lmap (map (ErrorAtProperty tagFieldName))) do
                    tag <- index f tagFieldName >>= readString
                    let expected = constructorTagTransform ctorName
@@ -296,12 +307,17 @@ instance genericDecodeConstructor
                      fail (ForeignError ("Expected " <> show expected <> " tag"))
                    pure tag
                  args <- mapExcept (lmap (map (ErrorAtProperty contentsFieldName)))
-                           (index f contentsFieldName >>= readArguments)
+                           ((contents unwrapRecords contentsFieldName f) >>= readArguments)
                  pure (Constructor args)
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
 
       numArgs = countArgs (Proxy :: Proxy rep)
+
+      contents :: Boolean -> String -> Foreign -> F Foreign
+      contents unwrapRecords contentsFieldName f'
+        | unwrapRecords && not (hasProperty contentsFieldName f') = pure f'
+        | otherwise = index f' contentsFieldName
 
       readArguments args =
         case numArgs of
@@ -327,9 +343,15 @@ instance genericEncodeConstructor
         else case opts.sumEncoding of
                TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } ->
                  unsafeToForeign (Object.singleton tagFieldName (unsafeToForeign $ constructorTagTransform ctorName)
-                           `Object.union` maybe Object.empty (Object.singleton contentsFieldName) (encodeArgsArray args))
+                           `Object.union` objectFromArgs opts.sumEncoding (encodeArgsArray args))
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
+
+      objectFromArgs :: SumEncoding -> Maybe Foreign -> Object Foreign
+      objectFromArgs _ Nothing = Object.empty
+      objectFromArgs (TaggedObject { contentsFieldName, unwrapRecords }) (Just f)
+        | typeOf f == "object" && not isArray f && unwrapRecords = unsafeFromForeign f
+        | otherwise = Object.singleton contentsFieldName f
 
       encodeArgsArray :: rep -> Maybe Foreign
       encodeArgsArray = unwrapArguments <<< List.toUnfoldable <<< encodeArgs opts

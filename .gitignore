@@ -5,3 +5,4 @@ output/
 .psc-ide-port
 node_modules/
 yarn.lock
+.spago
