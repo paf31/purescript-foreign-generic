@@ -15,6 +15,7 @@ import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Data.Traversable (sequence)
+import Data.Tuple (Tuple(..))
 import Foreign (F, Foreign, ForeignError(..), fail, typeOf, isArray, readArray, readBoolean, readChar, readInt, readNumber, readString, unsafeToForeign, unsafeFromForeign)
 import Foreign.Generic.Internal (readObject)
 import Foreign.NullOrUndefined (readNullOrUndefined, null)
@@ -137,6 +138,13 @@ instance arrayDecode :: Decode a => Decode (Array a) where
 instance listDecode :: Decode a => Decode (List a) where
   decode f = let (array :: F (Array a)) = decode f in List.fromFoldable <$> array
 
+instance tupleDecode :: (Decode a, Decode b) => Decode (Tuple a b) where
+  decode f = do
+    (arr :: Array Foreign) <- decode f
+    case arr of
+      [a, b] -> Tuple <$> decode a <*> decode b
+      _ -> except (Left (pure (ForeignError "Decode: Tuple was not a list of exactly 2 items")))
+
 instance maybeDecode :: Decode a => Decode (Maybe a) where
   decode = readNullOrUndefined decode
 
@@ -196,6 +204,9 @@ instance arrayEncode :: Encode a => Encode (Array a) where
 
 instance listEncode :: Encode a => Encode (List a) where
   encode f = let (arr :: Array a) = List.toUnfoldable f in encode arr
+
+instance encodeTuple :: (Encode a, Encode b) => Encode (Tuple a b) where
+  encode (Tuple a b) = unsafeToForeign [encode a, encode b]
 
 instance maybeEncode :: Encode a => Encode (Maybe a) where
   encode = maybe null encode
