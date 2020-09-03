@@ -4,6 +4,7 @@ import Prelude
 
 import Control.Monad.Except (runExcept)
 import Data.Bifunctor (bimap)
+import Data.BigInt as BigInt
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Map as Map
@@ -141,6 +142,7 @@ main = do
   testRoundTrip (Object.fromFoldable [Tuple "one" 1, Tuple "two" 2])
   testRoundTrip (Map.fromFoldable [Tuple "one" 1, Tuple "two" 2])
   testRoundTrip [ Left 5, Right "Test" ]
+  testRoundTrip (BigInt.pow (BigInt.fromInt 2) (BigInt.fromInt 60)) -- 2^60. Anything over 2^32 will confuse JavaScript.
   testUnaryConstructorLiteral
   let opts = defaultOptions { fieldTransform = toUpper }
   testGenericRoundTrip opts (RecordTest { foo: 1, bar: "test", baz: 'a' })

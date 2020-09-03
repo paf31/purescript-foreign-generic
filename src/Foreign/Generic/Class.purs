@@ -6,7 +6,9 @@ import Control.Alt ((<|>))
 import Control.Monad.Except (except, mapExcept)
 import Data.Array ((..), zipWith, length)
 import Data.Bifunctor (lmap)
-import Data.Either (Either(..))
+import Data.BigInt (BigInt)
+import Data.BigInt as BigInt
+import Data.Either (Either(..), note)
 import Data.Generic.Rep (Argument(..), Constructor(..), NoArguments(..), NoConstructors, Product(..), Sum(..))
 import Data.Identity (Identity(..))
 import Data.List (List(..), (:))
@@ -204,6 +206,11 @@ instance eitherDecode :: (Decode a, Decode b) => Decode (Either a b) where
       <|>
       (readProp "Right" value >>= (map Right <<< decode))
 
+instance bigIntDecode :: Decode BigInt where
+  decode value = do
+    str <- readString value
+    except $ note (pure (ForeignError ("Expected BigInt"))) $ BigInt.fromString str
+
 -- | The `Encode` class is used to generate encoding functions
 -- | of the form `a -> Foreign` using `generics-rep` deriving.
 -- |
@@ -277,6 +284,9 @@ instance setEncode :: (Ord a, Encode a) => Encode (Set a) where
 instance encodeEither :: (Encode a, Encode b) => Encode (Either a b) where
   encode (Left a) = encode $ Object.singleton "Left" a
   encode (Right b) = encode $ Object.singleton "Right" b
+
+instance bigIntEncode :: Encode BigInt where
+  encode = encode <<< BigInt.toString
 
 -- | When deriving `En`/`Decode` instances using `Generic`, we want
 -- | the `Options` object to apply to the outermost record type(s)
