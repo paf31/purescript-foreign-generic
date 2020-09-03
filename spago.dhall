@@ -5,6 +5,7 @@ You can edit this file as you like.
 { name = "foreign-generic"
 , dependencies =
     [ "assert"
+    , "bigints"
     , "console"
     , "effect"
     , "exceptions"
