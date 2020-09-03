@@ -198,6 +198,12 @@ instance setDecode :: (Ord a, Decode a) => Decode (Set a) where
     (arr :: Array a) <- decode f
     pure $ Set.fromFoldable arr
 
+instance eitherDecode :: (Decode a, Decode b) => Decode (Either a b) where
+  decode value =
+      (readProp "Left" value >>= (map Left <<< decode))
+      <|>
+      (readProp "Right" value >>= (map Right <<< decode))
+
 -- | The `Encode` class is used to generate encoding functions
 -- | of the form `a -> Foreign` using `generics-rep` deriving.
 -- |
@@ -266,6 +272,11 @@ instance mapEncode :: (Encode k, Encode v) => Encode (Map k v) where
 
 instance setEncode :: (Ord a, Encode a) => Encode (Set a) where
   encode s = let (arr :: Array a) = Set.toUnfoldable s in encode arr
+
+
+instance encodeEither :: (Encode a, Encode b) => Encode (Either a b) where
+  encode (Left a) = encode $ Object.singleton "Left" a
+  encode (Right b) = encode $ Object.singleton "Right" b
 
 -- | When deriving `En`/`Decode` instances using `Generic`, we want
 -- | the `Options` object to apply to the outermost record type(s)
