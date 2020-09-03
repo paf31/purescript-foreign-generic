@@ -140,6 +140,7 @@ main = do
   testRoundTrip (makeTree 5)
   testRoundTrip (Object.fromFoldable [Tuple "one" 1, Tuple "two" 2])
   testRoundTrip (Map.fromFoldable [Tuple "one" 1, Tuple "two" 2])
+  testRoundTrip [ Left 5, Right "Test" ]
   testUnaryConstructorLiteral
   let opts = defaultOptions { fieldTransform = toUpper }
   testGenericRoundTrip opts (RecordTest { foo: 1, bar: "test", baz: 'a' })
