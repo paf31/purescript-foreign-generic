@@ -18,12 +18,13 @@ import Data.Newtype (unwrap)
 import Data.Set (Set)
 import Data.Set as Set
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
-import Data.Traversable (sequence)
+import Data.Traversable (sequence, traverse)
 import Data.Tuple (Tuple(..))
-import Foreign (F, Foreign, ForeignError(..), fail, typeOf, isArray, readArray, readBoolean, readChar, readInt, readNumber, readString, unsafeToForeign, unsafeFromForeign)
+import Foreign (F, Foreign, ForeignError(..), fail, typeOf, isArray, readArray, readBoolean, readChar, readInt, readNull, readNumber, readString, unsafeToForeign, unsafeFromForeign)
 import Foreign.Generic.Internal (readObject)
+import Foreign.Index (hasProperty, index, readProp)
+import Foreign.Keys as Keys
 import Foreign.NullOrUndefined (readNullOrUndefined, null)
-import Foreign.Index (hasProperty, index)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import Prim.Row (class Cons, class Lacks)
@@ -159,9 +160,38 @@ instance recordDecode :: (RowToList r rl, DecodeRecord r rl) => Decode (Record r
   decode = decodeWithOptions defaultOptions
 
 instance mapDecode :: (Ord k, Decode k, Decode v) => Decode (Map k v) where
-  decode f = do
-    (tuple :: Array (Tuple k v)) <- decode f
-    pure $ Map.fromFoldable tuple
+  decode json =  decodeAsArrayOfPairs json <|> decodeAsObjectWithStringKeys json <|> decodeAsNull json
+    where
+      decodeAsArrayOfPairs o = do
+        pairs <- readArray o
+        asArray <-
+          traverse
+            ( \foreignPair ->
+                readArray foreignPair
+                  >>= case _ of
+                      [ foreignKey, foreignValue ] -> Tuple <$> decode foreignKey <*> decode foreignValue
+                      other -> fail $ TypeMismatch "Array (key-value pair)" "<Foreign>"
+            )
+            pairs
+        pure $ Map.fromFoldable asArray
+
+      decodeAsObjectWithStringKeys o = do
+        keys <- Keys.keys o
+        asArray <-
+          traverse
+            ( \keyString -> do
+                foreignValue <- readProp keyString o
+                key <- decode $ encode keyString
+                value <- decode foreignValue
+                pure (Tuple key value)
+            )
+            keys
+        pure $ Map.fromFoldable asArray
+
+      decodeAsNull o = do
+        _ <- readNull o
+        pure mempty
+
 
 instance setDecode :: (Ord a, Decode a) => Decode (Set a) where
   decode f = do
