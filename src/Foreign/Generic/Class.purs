@@ -207,9 +207,14 @@ instance eitherDecode :: (Decode a, Decode b) => Decode (Either a b) where
       (readProp "Right" value >>= (map Right <<< decode))
 
 instance bigIntDecode :: Decode BigInt where
-  decode value = do
-    str <- readString value
-    except $ note (pure (ForeignError ("Expected BigInt"))) $ BigInt.fromString str
+  decode json = decodeAsString json <|> decodeAsDigits json
+    where
+      decodeAsString value = do
+        str <- readString value
+        except $ note (pure (ForeignError ("Expected BigInt"))) $ BigInt.fromString str
+      decodeAsDigits value = do
+        int <- readInt value
+        pure $ BigInt.fromInt int
 
 -- | The `Encode` class is used to generate encoding functions
 -- | of the form `a -> Foreign` using `generics-rep` deriving.

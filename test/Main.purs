@@ -149,7 +149,10 @@ main = do
               , actual: runExcept (decodeJSON "null")
               }
   testRoundTrip [ Left 5, Right "Test" ]
-  testRoundTrip (BigInt.pow (BigInt.fromInt 2) (BigInt.fromInt 60)) -- 2^60. Anything over 2^32 will confuse JavaScript.
+  testRoundTrip (BigInt.pow (BigInt.fromInt 2) (BigInt.fromInt 60)) -- 2^60. Anything over 2^32 would baffle JavaScript.
+  assertEqual { expected: Right (BigInt.fromInt 50)
+              , actual: runExcept (decodeJSON "50")
+              }
   testUnaryConstructorLiteral
   let opts = defaultOptions { fieldTransform = toUpper }
   testGenericRoundTrip opts (RecordTest { foo: 1, bar: "test", baz: 'a' })
