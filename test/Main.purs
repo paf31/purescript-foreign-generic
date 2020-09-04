@@ -8,6 +8,7 @@ import Data.BigInt as BigInt
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Map as Map
+import Data.Map (Map)
 import Data.Maybe (Maybe(..), isNothing)
 import Data.String (toLower, toUpper)
 import Data.Tuple (Tuple(..))
@@ -20,7 +21,7 @@ import Foreign.Index (readProp)
 import Foreign.JSON (parseJSON)
 import Foreign.Object as Object
 import Global.Unsafe (unsafeStringify)
-import Test.Assert (assert, assert')
+import Test.Assert (assert, assert', assertEqual)
 import Test.Types (Fruit(..), IntList(..), RecordTest(..), Tree(..), TupleArray(..), UndefinedTest(..), SumWithRecord(..))
 
 buildTree :: forall a. (a -> TupleArray a a) -> Int -> a -> Tree a
@@ -141,6 +142,12 @@ main = do
   testRoundTrip (makeTree 5)
   testRoundTrip (Object.fromFoldable [Tuple "one" 1, Tuple "two" 2])
   testRoundTrip (Map.fromFoldable [Tuple "one" 1, Tuple "two" 2])
+  assertEqual { expected: Right (Map.fromFoldable [Tuple "foo" 5])
+              , actual: runExcept (decodeJSON "{\"foo\": 5}")
+              }
+  assertEqual { expected: Right (Map.empty :: Map String Int)
+              , actual: runExcept (decodeJSON "null")
+              }
   testRoundTrip [ Left 5, Right "Test" ]
   testRoundTrip (BigInt.pow (BigInt.fromInt 2) (BigInt.fromInt 60)) -- 2^60. Anything over 2^32 will confuse JavaScript.
   testUnaryConstructorLiteral
