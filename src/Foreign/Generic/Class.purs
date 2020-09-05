@@ -6,8 +6,9 @@ import Control.Alt ((<|>))
 import Control.Monad.Except (except, mapExcept)
 import Data.Array ((..), zipWith, length)
 import Data.Bifunctor (lmap)
-import Data.Either (Either(..))
+import Data.Either (Either(..), either)
 import Data.Generic.Rep (Argument(..), Constructor(..), NoArguments(..), NoConstructors, Product(..), Sum(..))
+import Data.Generic.Rep (class Generic, from, to)
 import Data.Identity (Identity(..))
 import Data.List (List(..), (:))
 import Data.List as List
@@ -15,9 +16,10 @@ import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Data.Traversable (sequence)
+import Data.Tuple (Tuple(..))
 import Foreign (F, Foreign, ForeignError(..), fail, readArray, readBoolean, readChar, readInt, readNumber, readString, unsafeToForeign)
 import Foreign.Generic.Internal (readObject)
-import Foreign.Index (index)
+import Foreign.Index (index, readProp)
 import Foreign.NullOrUndefined (readNullOrUndefined, null)
 import Foreign.Object (Object)
 import Foreign.Object as Object
@@ -112,6 +114,16 @@ instance numberDecode :: Decode Number where
 instance intDecode :: Decode Int where
   decode = readInt
 
+instance eitherDecode :: (Decode a, Decode b) => Decode (Either a b) where
+  decode val = 
+    Left <$> (readProp "Left" val >>= decode)
+    <|> Right <$> (readProp "Right" val >>= decode)
+
+instance tupleDecode :: (Decode a, Decode b) => Decode (Tuple a b) where
+  decode = readArray >=> case _ of
+    [a, b] -> Tuple <$> decode a <*> decode b
+    _ -> except $ Left $ pure $ ForeignError "Decode tuple: array has incorrect length"
+
 instance identityDecode :: Decode a => Decode (Identity a) where
   decode = map Identity <<< decode
 
@@ -182,6 +194,14 @@ instance arrayEncode :: Encode a => Encode (Array a) where
 
 instance maybeEncode :: Encode a => Encode (Maybe a) where
   encode = maybe null encode
+
+instance eitherEncode :: (Encode a, Encode b) => Encode (Either a b) where
+  encode = case _ of 
+    Left value -> unsafeToForeign $ Record.insert (SProxy:: SProxy "Left") (encode value) {}
+    Right value -> unsafeToForeign $ Record.insert (SProxy:: SProxy "Right") (encode value) {}
+
+instance tupleEncode :: (Encode a, Encode b) => Encode (Tuple a b) where
+  encode (Tuple a b) = encode [encode a, encode b]
 
 instance objectEncode :: Encode v => Encode (Object v) where
   encode = unsafeToForeign <<< Object.mapWithKey (\_ -> encode)
