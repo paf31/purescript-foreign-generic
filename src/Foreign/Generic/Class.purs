@@ -213,8 +213,8 @@ instance bigIntDecode :: Decode BigInt where
         str <- readString value
         except $ note (pure (ForeignError ("Expected BigInt"))) $ BigInt.fromString str
       decodeAsDigits value = do
-        int <- readInt value
-        pure $ BigInt.fromInt int
+        number <- readNumber value
+        except $ note (pure (ForeignError ("Expected BigInt"))) $ BigInt.fromNumber number
 
 -- | The `Encode` class is used to generate encoding functions
 -- | of the form `a -> Foreign` using `generics-rep` deriving.
@@ -291,7 +291,7 @@ instance encodeEither :: (Encode a, Encode b) => Encode (Either a b) where
   encode (Right b) = encode $ Object.singleton "Right" b
 
 instance bigIntEncode :: Encode BigInt where
-  encode = encode <<< BigInt.toString
+  encode = unsafeToForeign <<< BigInt.toNumber
 
 -- | When deriving `En`/`Decode` instances using `Generic`, we want
 -- | the `Options` object to apply to the outermost record type(s)
