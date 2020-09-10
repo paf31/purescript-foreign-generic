@@ -1,6 +1,7 @@
 module Foreign.JSON
   ( parseJSON
   , decodeJSONWith
+  , unsafeStringify
   ) where
 
 import Control.Monad.Except (ExceptT(..))
@@ -26,3 +27,5 @@ parseJSON =
 
 decodeJSONWith :: forall a. (Foreign -> F a) -> String -> F a
 decodeJSONWith f = f <=< parseJSON
+
+foreign import unsafeStringify :: forall a. a -> String

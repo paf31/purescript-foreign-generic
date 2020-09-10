@@ -5,7 +5,6 @@ You can edit this file as you like.
 { name = "foreign-generic"
 , dependencies =
     [ "assert"
-    , "bigints"
     , "console"
     , "effect"
     , "exceptions"
@@ -13,6 +12,8 @@ You can edit this file as you like.
     , "foreign-object"
     , "generics-rep"
     , "identity"
+    , "rationals"
+    , "quickcheck"
     , "test-unit"
     , "ordered-collections"
     , "proxy"

@@ -1,9 +1,10 @@
 module Test.Main where
 
 import Prelude
+import BigIntegerTests as BigIntegerTests
 import Control.Monad.Except (runExcept)
 import Data.Bifunctor (bimap)
-import Data.BigInt as BigInt
+import Data.BigInteger as BigInteger
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Map (Map)
@@ -128,6 +129,11 @@ testNothingFromMissing =
 main :: Effect Unit
 main =
   runTest do
+    roundTripTests
+    BigIntegerTests.all
+
+roundTripTests :: TestSuite
+roundTripTests =
     suite "RoundTrips" do
       testRoundTrip (RecordTest { foo: 1, bar: "test", baz: 'a' })
       testRoundTrip NoArgs
@@ -150,10 +156,12 @@ main =
         equal (Right (Map.empty :: Map String Int))
           (runExcept (decodeJSON "null"))
       testRoundTrip [ Left 5, Right "Test" ]
-      testRoundTrip (BigInt.pow (BigInt.fromInt 2) (BigInt.fromInt 60)) -- 2^60. Anything over 2^32 would baffle JavaScript.
-      test "BigInt" do
-        equal (Right (BigInt.fromInt 50))
-          (runExcept (decodeJSON "50"))
+      testRoundTrip (BigInteger.fromString ("9055784127882682410409638")) -- 2^60. Anything over 2^32 would baffle JavaScript.
+      test "BigInteger" do
+        equal (Right (BigInteger.fromInt 50))
+              (runExcept (decodeJSON "50"))
+        equal (Right {a: (BigInteger.fromInt 50)})
+              (runExcept (decodeJSON "{\"a\": 50}"))
       testUnaryConstructorLiteral
       let
         opts = defaultOptions { fieldTransform = toUpper }
