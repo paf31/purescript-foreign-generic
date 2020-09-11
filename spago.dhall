@@ -13,6 +13,7 @@ You can edit this file as you like.
     , "foreign-object"
     , "generics-rep"
     , "identity"
+    , "test-unit"
     , "ordered-collections"
     , "proxy"
     , "psci-support"
