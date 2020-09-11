@@ -140,6 +140,8 @@ newtype UndefinedTest = UndefinedTest
 derive instance eqUT :: Eq UndefinedTest
 derive instance geUT :: Generic UndefinedTest _
 
+instance showUT :: Show UndefinedTest where
+  show = genericShow
 instance dUT :: Decode UndefinedTest where
   decode = genericDecode $ defaultOptions
 instance eUT :: Encode UndefinedTest where
@@ -153,6 +155,8 @@ data Fruit
 derive instance eqFruit :: Eq Fruit
 derive instance geFruit :: Generic Fruit _
 
+instance showFruit :: Show Fruit where
+  show = genericShow
 instance dFruit :: Decode Fruit where
   decode = genericDecodeEnum defaultGenericEnumOptions
 instance eFruit :: Encode Fruit where
