@@ -3,6 +3,7 @@ module Foreign.Generic.Class where
 import Prelude
 
 import Control.Alt ((<|>))
+import Control.Bind (bindFlipped)
 import Control.Monad.Except (except, mapExcept)
 import Data.Array ((..), zipWith, length)
 import Data.Bifunctor (lmap)
@@ -14,6 +15,8 @@ import Data.List (List(..), (:))
 import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap)
+import Data.Set (Set)
+import Data.Set as Set
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..))
@@ -135,6 +138,15 @@ instance arrayDecode :: Decode a => Decode (Array a) where
     readElement :: Int -> Foreign -> F a
     readElement i value = mapExcept (lmap (map (ErrorAtIndex i))) (decode value)
 
+instance setDecode :: (Decode a, Ord a) => Decode (Set a) where
+  decode = (decode :: _ -> F (Array a)) >>> bindFlipped arrayToSetNoDuplicates
+    where
+    arrayToSetNoDuplicates :: Array a -> F (Set a)
+    arrayToSetNoDuplicates array = case Set.fromFoldable array of
+      set
+        | length array == Set.size set -> pure set
+      _ -> except $ Left $ pure $ ForeignError "Decode set: The foreign value contains duplicates"
+
 instance maybeDecode :: Decode a => Decode (Maybe a) where
   decode = readNullOrUndefined decode
 
@@ -191,6 +203,9 @@ instance identityEncode :: Encode a => Encode (Identity a) where
 
 instance arrayEncode :: Encode a => Encode (Array a) where
   encode = unsafeToForeign <<< map encode
+
+instance setEncode :: (Encode a, Ord a) => Encode (Set a) where
+  encode = (Set.toUnfoldable :: Set a -> Array a) >>> encode
 
 instance maybeEncode :: Encode a => Encode (Maybe a) where
   encode = maybe null encode
