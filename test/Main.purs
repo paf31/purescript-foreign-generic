@@ -3,6 +3,7 @@ module Test.Main where
 import Prelude
 import TestUtils (testGenericRoundTrip, testOption, testRoundTrip)
 import BigIntegerTests as BigIntegerTests
+import AesonEncodingTests as AesonEncodingTests
 import Control.Monad.Except (runExcept)
 import Data.Bifunctor (bimap)
 import Data.BigInteger as BigInteger
@@ -79,6 +80,7 @@ main =
   runTest do
     roundTripTests
     BigIntegerTests.all
+    AesonEncodingTests.all
 
 roundTripTests :: TestSuite
 roundTripTests =

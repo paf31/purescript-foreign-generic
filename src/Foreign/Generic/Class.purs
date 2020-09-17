@@ -1,7 +1,6 @@
 module Foreign.Generic.Class where
 
 import Prelude
-
 import Control.Alt ((<|>))
 import Control.Monad.Except (except, mapExcept)
 import Data.Array ((..), zipWith, length)
@@ -420,8 +419,12 @@ instance genericEncodeConstructor
         then maybe (unsafeToForeign {}) unsafeToForeign (encodeArgsArray args)
         else case opts.sumEncoding of
                TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } ->
-                 unsafeToForeign (Object.singleton tagFieldName (unsafeToForeign $ constructorTagTransform ctorName)
-                           `Object.union` objectFromArgs opts.sumEncoding (encodeArgsArray args))
+                 unsafeToForeign $
+                   let tagPart = Object.singleton tagFieldName (unsafeToForeign $ constructorTagTransform ctorName)
+                       contentPart = objectFromArgs opts.sumEncoding (encodeArgsArray args)
+                   in if Object.member tagFieldName contentPart
+                      then Object.insert contentsFieldName (unsafeToForeign contentPart) tagPart
+                      else tagPart `Object.union` contentPart
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
 
