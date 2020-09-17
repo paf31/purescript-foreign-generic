@@ -12,7 +12,7 @@ import Data.List (List(..), (:))
 import Data.List as List
 import Data.Map (Map)
 import Data.Map as Map
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Newtype (unwrap)
 import Data.Set (Set)
 import Data.Set as Set
@@ -415,8 +415,8 @@ instance genericEncodeConstructor
   :: (IsSymbol name, GenericEncodeArgs rep)
   => GenericEncode (Constructor name rep) where
   encodeOpts opts (Constructor args) =
-      if opts.unwrapSingleConstructors
-        then maybe (unsafeToForeign {}) unsafeToForeign (encodeArgsArray args)
+        if opts.unwrapSingleConstructors
+        then fromMaybe (unsafeToForeign {}) (encodeArgsArray args)
         else case opts.sumEncoding of
                TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } ->
                  unsafeToForeign $
