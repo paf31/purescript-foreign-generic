@@ -212,8 +212,8 @@ instance maybeEncode :: Encode a => Encode (Maybe a) where
 
 instance eitherEncode :: (Encode a, Encode b) => Encode (Either a b) where
   encode = case _ of 
-    Left value -> unsafeToForeign $ Record.insert (SProxy:: SProxy "Left") (encode value) {}
-    Right value -> unsafeToForeign $ Record.insert (SProxy:: SProxy "Right") (encode value) {}
+    Left value -> unsafeToForeign $ {"Left": encode value }
+    Right value -> unsafeToForeign $ { "Right": encode value }
 
 instance tupleEncode :: (Encode a, Encode b) => Encode (Tuple a b) where
   encode (Tuple a b) = encode [encode a, encode b]
