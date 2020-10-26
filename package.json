@@ -3,12 +3,18 @@
   "scripts": {
     "clean": "rimraf output && rimraf .pulp-cache",
     "build": "pulp build -- --censor-lib --strict",
+    "purs:ide": "purs ide server --log-level=debug 'bower_components/purescript-*/src/**/*.purs' 'src/**/*.purs' 'test/**/*.purs'",
     "test": "pulp test"
   },
   "devDependencies": {
-    "pulp": "^12.0.0",
-    "purescript": "^0.12.0",
-    "purescript-psa": "^0.5.0",
-    "rimraf": "^2.5.0"
+    "bower": "^1.8.8",
+    "pulp": "^13.0.0",
+    "purescript": "^0.13.3",
+    "purescript-psa": "^0.7.3",
+    "rimraf": "^3.0.0"
+  },
+  "dependencies": {
+    "bignumber": "^1.1.0",
+    "json-bigint": "^1.0.0"
   }
 }

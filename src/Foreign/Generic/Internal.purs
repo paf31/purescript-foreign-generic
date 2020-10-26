@@ -1,7 +1,6 @@
 module Foreign.Generic.Internal where
 
 import Prelude
-
 import Foreign (F, Foreign, ForeignError(..), fail, tagOf, unsafeFromForeign)
 import Foreign.Object (Object)
 

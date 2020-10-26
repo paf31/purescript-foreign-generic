@@ -1,7 +1,6 @@
 module Foreign.Generic.Class where
 
 import Prelude
-
 import Control.Alt ((<|>))
 import Control.Monad.Except (except, mapExcept)
 import Data.Array ((..), zipWith, length)
@@ -11,13 +10,19 @@ import Data.Generic.Rep (Argument(..), Constructor(..), NoArguments(..), NoConst
 import Data.Identity (Identity(..))
 import Data.List (List(..), (:))
 import Data.List as List
-import Data.Maybe (Maybe(..), maybe)
+import Data.Map (Map)
+import Data.Map as Map
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Newtype (unwrap)
+import Data.Set (Set)
+import Data.Set as Set
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
-import Data.Traversable (sequence)
-import Foreign (F, Foreign, ForeignError(..), fail, readArray, readBoolean, readChar, readInt, readNumber, readString, unsafeToForeign)
+import Data.Traversable (sequence, traverse)
+import Data.Tuple (Tuple(..))
+import Foreign (F, Foreign, ForeignError(..), fail, typeOf, isArray, readArray, readBoolean, readChar, readInt, readNull, readNumber, readString, unsafeToForeign, unsafeFromForeign)
 import Foreign.Generic.Internal (readObject)
-import Foreign.Index (index)
+import Foreign.Index (hasProperty, index, readProp)
+import Foreign.Keys as Keys
 import Foreign.NullOrUndefined (readNullOrUndefined, null)
 import Foreign.Object (Object)
 import Foreign.Object as Object
@@ -48,6 +53,7 @@ data SumEncoding
     { tagFieldName :: String
     , contentsFieldName :: String
     , constructorTagTransform :: String -> String
+    , unwrapRecords :: Boolean
     }
 
 -- | Default decoding/encoding options:
@@ -64,11 +70,21 @@ defaultOptions =
         { tagFieldName: "tag"
         , contentsFieldName: "contents"
         , constructorTagTransform: identity
+        , unwrapRecords: false
         }
   , unwrapSingleConstructors: false
   , unwrapSingleArguments: true
   , fieldTransform: identity
   }
+
+-- | Aeson unwraps records, use this sum encoding with Aeson generated json
+aesonSumEncoding :: SumEncoding
+aesonSumEncoding = TaggedObject
+        { tagFieldName: "tag"
+        , contentsFieldName: "contents"
+        , constructorTagTransform: identity
+        , unwrapRecords: true
+        }
 
 -- | The `Decode` class is used to generate decoding functions
 -- | of the form `Foreign -> F a` using `generics-rep` deriving.
@@ -123,6 +139,16 @@ instance arrayDecode :: Decode a => Decode (Array a) where
     readElement :: Int -> Foreign -> F a
     readElement i value = mapExcept (lmap (map (ErrorAtIndex i))) (decode value)
 
+instance listDecode :: Decode a => Decode (List a) where
+  decode f = let (array :: F (Array a)) = decode f in List.fromFoldable <$> array
+
+instance tupleDecode :: (Decode a, Decode b) => Decode (Tuple a b) where
+  decode f = do
+    (arr :: Array Foreign) <- decode f
+    case arr of
+      [a, b] -> Tuple <$> decode a <*> decode b
+      _ -> except (Left (pure (ForeignError "Decode: Tuple was not a list of exactly 2 items")))
+
 instance maybeDecode :: Decode a => Decode (Maybe a) where
   decode = readNullOrUndefined decode
 
@@ -131,6 +157,51 @@ instance objectDecode :: Decode v => Decode (Object v) where
 
 instance recordDecode :: (RowToList r rl, DecodeRecord r rl) => Decode (Record r) where
   decode = decodeWithOptions defaultOptions
+
+instance mapDecode :: (Ord k, Decode k, Decode v) => Decode (Map k v) where
+  decode json =  decodeAsArrayOfPairs json <|> decodeAsObjectWithStringKeys json <|> decodeAsNull json
+    where
+      decodeAsArrayOfPairs o = do
+        pairs <- readArray o
+        asArray <-
+          traverse
+            ( \foreignPair ->
+                readArray foreignPair
+                  >>= case _ of
+                      [ foreignKey, foreignValue ] -> Tuple <$> decode foreignKey <*> decode foreignValue
+                      other -> fail $ TypeMismatch "Array (key-value pair)" "<Foreign>"
+            )
+            pairs
+        pure $ Map.fromFoldable asArray
+
+      decodeAsObjectWithStringKeys o = do
+        keys <- Keys.keys o
+        asArray <-
+          traverse
+            ( \keyString -> do
+                foreignValue <- readProp keyString o
+                key <- decode $ encode keyString
+                value <- decode foreignValue
+                pure (Tuple key value)
+            )
+            keys
+        pure $ Map.fromFoldable asArray
+
+      decodeAsNull o = do
+        _ <- readNull o
+        pure mempty
+
+
+instance setDecode :: (Ord a, Decode a) => Decode (Set a) where
+  decode f = do
+    (arr :: Array a) <- decode f
+    pure $ Set.fromFoldable arr
+
+instance eitherDecode :: (Decode a, Decode b) => Decode (Either a b) where
+  decode value =
+      (readProp "Left" value >>= (map Left <<< decode))
+      <|>
+      (readProp "Right" value >>= (map Right <<< decode))
 
 -- | The `Encode` class is used to generate encoding functions
 -- | of the form `a -> Foreign` using `generics-rep` deriving.
@@ -180,6 +251,12 @@ instance identityEncode :: Encode a => Encode (Identity a) where
 instance arrayEncode :: Encode a => Encode (Array a) where
   encode = unsafeToForeign <<< map encode
 
+instance listEncode :: Encode a => Encode (List a) where
+  encode f = let (arr :: Array a) = List.toUnfoldable f in encode arr
+
+instance encodeTuple :: (Encode a, Encode b) => Encode (Tuple a b) where
+  encode (Tuple a b) = unsafeToForeign [encode a, encode b]
+
 instance maybeEncode :: Encode a => Encode (Maybe a) where
   encode = maybe null encode
 
@@ -188,6 +265,17 @@ instance objectEncode :: Encode v => Encode (Object v) where
 
 instance recordEncode :: (RowToList r rl, EncodeRecord r rl) => Encode (Record r) where
   encode = encodeWithOptions defaultOptions
+
+instance mapEncode :: (Encode k, Encode v) => Encode (Map k v) where
+  encode m = encode (Map.toUnfoldable m :: Array _)
+
+instance setEncode :: (Ord a, Encode a) => Encode (Set a) where
+  encode s = let (arr :: Array a) = Set.toUnfoldable s in encode arr
+
+
+instance encodeEither :: (Encode a, Encode b) => Encode (Either a b) where
+  encode (Left a) = encode $ Object.singleton "Left" a
+  encode (Right b) = encode $ Object.singleton "Right" b
 
 -- | When deriving `En`/`Decode` instances using `Generic`, we want
 -- | the `Options` object to apply to the outermost record type(s)
@@ -288,7 +376,7 @@ instance genericDecodeConstructor
       if opts.unwrapSingleConstructors
         then Constructor <$> readArguments f
         else case opts.sumEncoding of
-               TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } -> do
+               TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform, unwrapRecords } -> do
                  tag <- mapExcept (lmap (map (ErrorAtProperty tagFieldName))) do
                    tag <- index f tagFieldName >>= readString
                    let expected = constructorTagTransform ctorName
@@ -296,12 +384,17 @@ instance genericDecodeConstructor
                      fail (ForeignError ("Expected " <> show expected <> " tag"))
                    pure tag
                  args <- mapExcept (lmap (map (ErrorAtProperty contentsFieldName)))
-                           (index f contentsFieldName >>= readArguments)
+                           ((contents unwrapRecords contentsFieldName f) >>= readArguments)
                  pure (Constructor args)
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
 
       numArgs = countArgs (Proxy :: Proxy rep)
+
+      contents :: Boolean -> String -> Foreign -> F Foreign
+      contents unwrapRecords contentsFieldName f'
+        | unwrapRecords && not (hasProperty contentsFieldName f') = pure f'
+        | otherwise = index f' contentsFieldName
 
       readArguments args =
         case numArgs of
@@ -322,14 +415,24 @@ instance genericEncodeConstructor
   :: (IsSymbol name, GenericEncodeArgs rep)
   => GenericEncode (Constructor name rep) where
   encodeOpts opts (Constructor args) =
-      if opts.unwrapSingleConstructors
-        then maybe (unsafeToForeign {}) unsafeToForeign (encodeArgsArray args)
+        if opts.unwrapSingleConstructors
+        then fromMaybe (unsafeToForeign {}) (encodeArgsArray args)
         else case opts.sumEncoding of
                TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } ->
-                 unsafeToForeign (Object.singleton tagFieldName (unsafeToForeign $ constructorTagTransform ctorName)
-                           `Object.union` maybe Object.empty (Object.singleton contentsFieldName) (encodeArgsArray args))
+                 unsafeToForeign $
+                   let tagPart = Object.singleton tagFieldName (unsafeToForeign $ constructorTagTransform ctorName)
+                       contentPart = objectFromArgs opts.sumEncoding (encodeArgsArray args)
+                   in if Object.member tagFieldName contentPart
+                      then Object.insert contentsFieldName (unsafeToForeign contentPart) tagPart
+                      else tagPart `Object.union` contentPart
     where
       ctorName = reflectSymbol (SProxy :: SProxy name)
+
+      objectFromArgs :: SumEncoding -> Maybe Foreign -> Object Foreign
+      objectFromArgs _ Nothing = Object.empty
+      objectFromArgs (TaggedObject { contentsFieldName, unwrapRecords }) (Just f)
+        | typeOf f == "object" && not isArray f && unwrapRecords = unsafeFromForeign f
+        | otherwise = Object.singleton contentsFieldName f
 
       encodeArgsArray :: rep -> Maybe Foreign
       encodeArgsArray = unwrapArguments <<< List.toUnfoldable <<< encodeArgs opts

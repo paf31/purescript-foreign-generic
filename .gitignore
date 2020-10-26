@@ -3,3 +3,6 @@ bower_components/
 output/
 .psc-package
 .psc-ide-port
+node_modules/
+yarn.lock
+.spago
