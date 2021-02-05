@@ -14,6 +14,8 @@ import Prelude
 
 foreign import parseJSONImpl :: EffectFn1 String Foreign
 
+foreign import unsafeStringify :: forall a . a -> String
+
 -- | Parse a JSON string as `Foreign` data
 parseJSON :: String -> F Foreign
 parseJSON =
