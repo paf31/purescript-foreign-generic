@@ -1,6 +1,7 @@
 module Foreign.JSON
   ( parseJSON
   , decodeJSONWith
+  , unsafeStringify
   ) where
 
 import Control.Monad.Except (ExceptT(..))
