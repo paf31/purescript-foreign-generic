@@ -15,9 +15,9 @@ import Foreign (isNull, unsafeToForeign)
 import Foreign.Generic (class Decode, class Encode, class GenericDecode, class GenericEncode, Options, decode, encode, defaultOptions, decodeJSON, encodeJSON, genericDecodeJSON, genericEncodeJSON)
 import Foreign.Generic.EnumEncoding (class GenericDecodeEnum, class GenericEncodeEnum, GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
 import Foreign.Index (readProp)
+import Foreign.Internal.Stringify (unsafeStringify)
 import Foreign.JSON (parseJSON)
 import Foreign.Object as Object
-import Global.Unsafe (unsafeStringify)
 import Test.Assert (assert, assert')
 import Test.Types (Fruit(..), IntList(..), RecordTest(..), Tree(..), TupleArray(..), UndefinedTest(..))
 
