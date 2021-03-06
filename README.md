@@ -1,5 +1,7 @@
 # purescript-foreign-generic
 
+![CI](https://github.com/paf31/purescript-foreign-generic/workflows/ci.yml/badge.svg)
+
 [![Build Status](https://travis-ci.org/paf31/purescript-foreign-generic.svg?branch=master)](https://travis-ci.org/paf31/purescript-foreign-generic)
 
 Generic deriving for `purescript-foreign`.
