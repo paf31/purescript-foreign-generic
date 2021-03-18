@@ -15,8 +15,8 @@ import Foreign (F, Foreign)
 import Foreign (F, Foreign, ForeignError(..)) as Reexports
 import Foreign.Generic.Class (class Decode, class Encode, class GenericDecode, class GenericEncode, Options, decode, decodeOpts, encode, encodeOpts)
 import Foreign.Generic.Class (class Decode, class Encode, class GenericDecode, class GenericEncode, Options, SumEncoding(..), defaultOptions, decode, encode) as Reexports
+import Foreign.Internal.Stringify (unsafeStringify)
 import Foreign.JSON (decodeJSONWith, parseJSON)
-import Global.Unsafe (unsafeStringify)
 
 -- | Read a value which has a `Generic` type.
 genericDecode
