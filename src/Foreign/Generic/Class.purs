@@ -3,21 +3,26 @@ module Foreign.Generic.Class where
 import Prelude
 
 import Control.Alt ((<|>))
+import Control.Bind (bindFlipped)
 import Control.Monad.Except (except, mapExcept)
 import Data.Array ((..), zipWith, length)
 import Data.Bifunctor (lmap)
-import Data.Either (Either(..))
+import Data.Either (Either(..), either)
 import Data.Generic.Rep (Argument(..), Constructor(..), NoArguments(..), NoConstructors, Product(..), Sum(..))
+import Data.Generic.Rep (class Generic, from, to)
 import Data.Identity (Identity(..))
 import Data.List (List(..), (:))
 import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap)
+import Data.Set (Set)
+import Data.Set as Set
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Data.Traversable (sequence)
+import Data.Tuple (Tuple(..))
 import Foreign (F, Foreign, ForeignError(..), fail, readArray, readBoolean, readChar, readInt, readNumber, readString, unsafeToForeign)
 import Foreign.Generic.Internal (readObject)
-import Foreign.Index (index)
+import Foreign.Index (index, readProp)
 import Foreign.NullOrUndefined (readNullOrUndefined, null)
 import Foreign.Object (Object)
 import Foreign.Object as Object
@@ -112,6 +117,16 @@ instance numberDecode :: Decode Number where
 instance intDecode :: Decode Int where
   decode = readInt
 
+instance eitherDecode :: (Decode a, Decode b) => Decode (Either a b) where
+  decode val = 
+    Left <$> (readProp "Left" val >>= decode)
+    <|> Right <$> (readProp "Right" val >>= decode)
+
+instance tupleDecode :: (Decode a, Decode b) => Decode (Tuple a b) where
+  decode = readArray >=> case _ of
+    [a, b] -> Tuple <$> decode a <*> decode b
+    _ -> except $ Left $ pure $ ForeignError "Decode tuple: array has incorrect length"
+
 instance identityDecode :: Decode a => Decode (Identity a) where
   decode = map Identity <<< decode
 
@@ -122,6 +137,15 @@ instance arrayDecode :: Decode a => Decode (Array a) where
 
     readElement :: Int -> Foreign -> F a
     readElement i value = mapExcept (lmap (map (ErrorAtIndex i))) (decode value)
+
+instance setDecode :: (Decode a, Ord a) => Decode (Set a) where
+  decode = (decode :: _ -> F (Array a)) >>> bindFlipped arrayToSetNoDuplicates
+    where
+    arrayToSetNoDuplicates :: Array a -> F (Set a)
+    arrayToSetNoDuplicates array = case Set.fromFoldable array of
+      set
+        | length array == Set.size set -> pure set
+      _ -> except $ Left $ pure $ ForeignError "Decode set: The foreign value contains duplicates"
 
 instance maybeDecode :: Decode a => Decode (Maybe a) where
   decode = readNullOrUndefined decode
@@ -180,8 +204,19 @@ instance identityEncode :: Encode a => Encode (Identity a) where
 instance arrayEncode :: Encode a => Encode (Array a) where
   encode = unsafeToForeign <<< map encode
 
+instance setEncode :: (Encode a, Ord a) => Encode (Set a) where
+  encode = (Set.toUnfoldable :: Set a -> Array a) >>> encode
+
 instance maybeEncode :: Encode a => Encode (Maybe a) where
   encode = maybe null encode
+
+instance eitherEncode :: (Encode a, Encode b) => Encode (Either a b) where
+  encode = case _ of 
+    Left value -> unsafeToForeign $ {"Left": encode value }
+    Right value -> unsafeToForeign $ { "Right": encode value }
+
+instance tupleEncode :: (Encode a, Encode b) => Encode (Tuple a b) where
+  encode (Tuple a b) = encode [encode a, encode b]
 
 instance objectEncode :: Encode v => Encode (Object v) where
   encode = unsafeToForeign <<< Object.mapWithKey (\_ -> encode)
