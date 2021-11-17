@@ -1,6 +1,9 @@
-The MIT License (MIT)
+purescript-foreign-generic uses code taken from the purescript-foreign library,
+which is used under the terms of the MIT license, below:
 
-Copyright (c) 2017 Phil Freeman
+  The MIT License (MIT)
+
+  Copyright (c) 2014 PureScript
 
   Permission is hereby granted, free of charge, to any person obtaining a copy of
   this software and associated documentation files (the "Software"), to deal in
