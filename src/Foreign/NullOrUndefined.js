@@ -1,3 +1,2 @@
-exports['null'] = null;
-
-exports['undefined'] = undefined;
+export const aNull = null;
+export const anUndefined = undefined;

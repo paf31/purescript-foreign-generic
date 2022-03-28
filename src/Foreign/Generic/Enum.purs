@@ -4,10 +4,11 @@ import Prelude
 
 import Control.Alt ((<|>))
 import Data.Generic.Rep (class Generic, Argument, Constructor(..), NoArguments(..), Product, Sum(..), from, to)
-import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
+import Data.Symbol (class IsSymbol, reflectSymbol)
 import Foreign (F, Foreign, ForeignError(..), fail, readString, unsafeToForeign)
 import Partial.Unsafe (unsafeCrashWith)
 import Prim.TypeError (class Fail, Text)
+import Type.Proxy (Proxy(..))
 
 type GenericEnumOptions =
   { constructorTagTransform :: String -> String
@@ -77,7 +78,7 @@ instance ctorNoArgsGenericDecodeEnum
       fail (ForeignError ("Expected " <> show ctorName <> " tag for unary constructor literal " <> ctorName))
     pure $ Constructor NoArguments
     where
-      ctorName = constructorTagTransform $ reflectSymbol (SProxy :: SProxy name)
+      ctorName = constructorTagTransform $ reflectSymbol (Proxy :: Proxy name)
 
 instance ctorArgumentGenericDecodeEnum
   :: Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")
@@ -100,7 +101,7 @@ instance ctorNoArgsGenericEncodeEnum
   => GenericEncodeEnum (Constructor name NoArguments) where
   encodeEnum {constructorTagTransform} _ = unsafeToForeign ctorName
     where
-      ctorName = constructorTagTransform $ reflectSymbol (SProxy :: SProxy name)
+      ctorName = constructorTagTransform $ reflectSymbol (Proxy :: Proxy name)
 
 instance ctorArgumentGenericEncodeEnum
   :: Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")
