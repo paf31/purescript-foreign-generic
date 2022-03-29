@@ -13,6 +13,7 @@ import Effect (Effect)
 import Effect.Console (log)
 import Foreign (isNull, unsafeToForeign)
 import Foreign.Generic (class Decode, class Encode, class GenericDecode, class GenericEncode, Options, decode, encode, defaultOptions, decodeJSON, encodeJSON, genericDecodeJSON, genericEncodeJSON)
+import Foreign.Generic.Class (Poly(..))
 import Foreign.Generic.EnumEncoding (class GenericDecodeEnum, class GenericEncodeEnum, GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
 import Foreign.Index (readProp)
 import Foreign.Internal.Stringify (unsafeStringify)
@@ -131,6 +132,7 @@ main = do
   testRoundTrip [Just "test"]
   testRoundTrip [Nothing :: Maybe String]
   testRoundTrip (Apple)
+  testRoundTrip (Poly {foo : "foo"})
   testRoundTrip (makeTree 0)
   testRoundTrip (makeTree 5)
   testRoundTrip (Object.fromFoldable [Tuple "one" 1, Tuple "two" 2])
