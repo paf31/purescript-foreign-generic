@@ -100,7 +100,7 @@ instance decodeTree :: Decode a => Decode (Tree a) where
   decode x = (coerce :: Tree (Poly a) -> Tree a) <$> genericDecode defaultOptions x
 
 instance Encode a => Encode (Tree a) where
-  encode = genericEncode defaultOptions <<< (coerce :: Tree a -> Tree (Poly a))
+  encode x = genericEncode defaultOptions ((coerce :: Tree a -> Tree (Poly a)) x)
 
 newtype UndefinedTest = UndefinedTest
   { a :: Maybe String
