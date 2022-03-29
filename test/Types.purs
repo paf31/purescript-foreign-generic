@@ -3,14 +3,16 @@ module Test.Types where
 import Prelude
 
 import Data.Bifunctor (class Bifunctor)
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
+import Data.Maybe (Maybe)
+import Data.Show.Generic (genericShow)
+import Data.Tuple (Tuple(..))
 import Foreign (ForeignError(..), fail, readArray, unsafeToForeign)
 import Foreign.Generic (class Encode, class Decode, Options, SumEncoding(..), encode, decode, defaultOptions, genericDecode, genericEncode)
+import Foreign.Generic.Class (Poly(..))
 import Foreign.Generic.EnumEncoding (defaultGenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
-import Data.Generic.Rep (class Generic)
-import Data.Eq.Generic (genericEq)
-import Data.Show.Generic (genericShow)
-import Data.Maybe (Maybe)
-import Data.Tuple (Tuple(..))
+import Safe.Coerce (coerce)
 
 newtype TupleArray a b = TupleArray (Tuple a b)
 
@@ -95,10 +97,10 @@ instance eqTree :: Eq a => Eq (Tree a) where
   eq x y = genericEq x y
 
 instance decodeTree :: Decode a => Decode (Tree a) where
-  decode x = genericDecode defaultOptions x
+  decode x = (coerce :: Tree (Poly a) -> Tree a) <$> genericDecode defaultOptions x
 
-instance encodeTree :: Encode a => Encode (Tree a) where
-  encode x = genericEncode defaultOptions x
+instance Encode a => Encode (Tree a) where
+  encode = genericEncode defaultOptions <<< (coerce :: Tree a -> Tree (Poly a))
 
 newtype UndefinedTest = UndefinedTest
   { a :: Maybe String

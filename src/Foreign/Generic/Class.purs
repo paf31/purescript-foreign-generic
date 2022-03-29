@@ -30,6 +30,9 @@ import Record.Builder as Builder
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
 
+newtype Poly a = Poly a
+derive newtype instance eqPoly :: Eq a => Eq (Poly a)
+
 -- | Encoding/Decoding options which can be used to customize
 -- | `Decode` and `Encode` instances which are derived via
 -- | `Generic` (see `genericEncode` and `genericDecode`).
@@ -132,6 +135,9 @@ instance objectDecode :: Decode v => Decode (Object v) where
 instance recordDecode :: (RowToList r rl, DecodeRecord r rl) => Decode (Record r) where
   decode = decodeWithOptions defaultOptions
 
+instance polyDecode :: Decode a => Decode (Poly a) where
+  decode = map Poly <<< decode
+
 -- | The `Encode` class is used to generate encoding functions
 -- | of the form `a -> Foreign` using `generics-rep` deriving.
 -- |
@@ -189,6 +195,9 @@ instance objectEncode :: Encode v => Encode (Object v) where
 instance recordEncode :: (RowToList r rl, EncodeRecord r rl) => Encode (Record r) where
   encode = encodeWithOptions defaultOptions
 
+instance polyEncode :: Encode a => Encode (Poly a) where
+  encode (Poly a) = encode a
+
 -- | When deriving `En`/`Decode` instances using `Generic`, we want
 -- | the `Options` object to apply to the outermost record type(s)
 -- | under the data constructors.
@@ -207,11 +216,15 @@ class EncodeWithOptions a where
 
 instance decodeWithOptionsRecord :: (RowToList r rl, DecodeRecord r rl) => DecodeWithOptions (Record r) where
   decodeWithOptions opts = map (flip Builder.build {}) <$> decodeRecordWithOptions (Proxy :: Proxy rl) opts
+else instance decodeWithOptionsPoly :: Decode a => DecodeWithOptions (Poly a) where
+  decodeWithOptions _ = decode
 else instance decodeWithOptionsOther :: Decode a => DecodeWithOptions a where
   decodeWithOptions _ = decode
 
 instance encodeWithOptionsRecord :: (RowToList r rl, EncodeRecord r rl) => EncodeWithOptions (Record r) where
   encodeWithOptions opts = unsafeToForeign <<< encodeRecordWithOptions (Proxy :: Proxy rl) opts
+else instance encodeWithOptionsPoly :: Encode a => EncodeWithOptions (Poly a) where
+  encodeWithOptions _ = encode
 else instance encodeWithOptionsOther :: Encode a => EncodeWithOptions a where
   encodeWithOptions _ = encode
 
