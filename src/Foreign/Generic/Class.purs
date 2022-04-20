@@ -26,7 +26,6 @@ import Prim.RowList (class RowToList, Nil, Cons)
 import Record as Record
 import Record.Builder (Builder)
 import Record.Builder as Builder
-import Type.Data.RowList (RLProxy(..))
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -206,20 +205,20 @@ class EncodeWithOptions a where
   encodeWithOptions :: Options -> a -> Foreign
 
 instance decodeWithOptionsRecord :: (RowToList r rl, DecodeRecord r rl) => DecodeWithOptions (Record r) where
-  decodeWithOptions opts = map (flip Builder.build {}) <$> decodeRecordWithOptions (RLProxy :: RLProxy rl) opts
+  decodeWithOptions opts = map (flip Builder.build {}) <$> decodeRecordWithOptions (Proxy :: Proxy rl) opts
 else instance decodeWithOptionsOther :: Decode a => DecodeWithOptions a where
   decodeWithOptions _ = decode
 
 instance encodeWithOptionsRecord :: (RowToList r rl, EncodeRecord r rl) => EncodeWithOptions (Record r) where
-  encodeWithOptions opts = unsafeToForeign <<< encodeRecordWithOptions (RLProxy :: RLProxy rl) opts
+  encodeWithOptions opts = unsafeToForeign <<< encodeRecordWithOptions (Proxy :: Proxy rl) opts
 else instance encodeWithOptionsOther :: Encode a => EncodeWithOptions a where
   encodeWithOptions _ = encode
 
 class DecodeRecord r rl | rl -> r where
-  decodeRecordWithOptions :: RLProxy rl -> Options -> Foreign -> F (Builder {} (Record r))
+  decodeRecordWithOptions :: Proxy rl -> Options -> Foreign -> F (Builder {} (Record r))
 
 class EncodeRecord r rl | rl -> r where
-  encodeRecordWithOptions :: RLProxy rl -> Options -> Record r -> Object Foreign
+  encodeRecordWithOptions :: Proxy rl -> Options -> Record r -> Object Foreign
 
 instance decodeRecordNil :: DecodeRecord () Nil where
   decodeRecordWithOptions _ _ _ = pure identity
@@ -237,7 +236,7 @@ instance decodeRecordCons
     => DecodeRecord r (Cons l a rl_)
   where
     decodeRecordWithOptions _ opts f = do
-      builder <- decodeRecordWithOptions (RLProxy :: RLProxy rl_) opts f
+      builder <- decodeRecordWithOptions (Proxy :: Proxy rl_) opts f
       let l = reflectSymbol (SProxy :: SProxy l)
           l_transformed = (opts.fieldTransform l)
       f_ <- index f l_transformed
@@ -253,7 +252,7 @@ instance encodeRecordCons
     => EncodeRecord r (Cons l a rl_)
   where
     encodeRecordWithOptions _ opts rec =
-      let obj = encodeRecordWithOptions (RLProxy :: RLProxy rl_) opts (unsafeCoerce rec)
+      let obj = encodeRecordWithOptions (Proxy :: Proxy rl_) opts (unsafeCoerce rec)
           l = reflectSymbol (SProxy :: SProxy l)
        in Object.insert (opts.fieldTransform l) (encodeWithOptions opts (Record.get (SProxy :: SProxy l) rec)) obj
 
