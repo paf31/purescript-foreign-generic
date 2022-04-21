@@ -1,3 +1,3 @@
-exports['null'] = null;
+export const nullImpl = null
 
-exports['undefined'] = undefined;
+export const undefinedImpl = undefined

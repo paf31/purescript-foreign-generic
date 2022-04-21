@@ -13,7 +13,7 @@ import Data.List (List(..), (:))
 import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap)
-import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
+import Data.Symbol (class IsSymbol, reflectSymbol)
 import Data.Traversable (sequence)
 import Foreign (F, Foreign, ForeignError(..), fail, readArray, readBoolean, readChar, readInt, readNumber, readString, unsafeToForeign)
 import Foreign.Generic.Internal (readObject)
@@ -236,12 +236,12 @@ instance decodeRecordCons
     => DecodeRecord r (Cons l a rl_)
   where
     decodeRecordWithOptions _ opts f = do
-      builder <- decodeRecordWithOptions (Proxy :: Proxy rl_) opts f
-      let l = reflectSymbol (SProxy :: SProxy l)
+      builder <- decodeRecordWithOptions (RLProxy :: RLProxy rl_) opts f
+      let l = reflectSymbol (Proxy :: Proxy l)
           l_transformed = (opts.fieldTransform l)
       f_ <- index f l_transformed
       a <- mapExcept (lmap (map (ErrorAtProperty l_transformed))) (decodeWithOptions opts f_)
-      pure (builder >>> Builder.insert (SProxy :: SProxy l) a)
+      pure (builder >>> Builder.insert (Proxy :: Proxy l) a)
 
 instance encodeRecordCons
     :: ( Cons l a r_ r
@@ -252,9 +252,9 @@ instance encodeRecordCons
     => EncodeRecord r (Cons l a rl_)
   where
     encodeRecordWithOptions _ opts rec =
-      let obj = encodeRecordWithOptions (Proxy :: Proxy rl_) opts (unsafeCoerce rec)
-          l = reflectSymbol (SProxy :: SProxy l)
-       in Object.insert (opts.fieldTransform l) (encodeWithOptions opts (Record.get (SProxy :: SProxy l) rec)) obj
+      let obj = encodeRecordWithOptions (RLProxy :: RLProxy rl_) opts (unsafeCoerce rec)
+          l = reflectSymbol (Proxy :: Proxy l)
+       in Object.insert (opts.fieldTransform l) (encodeWithOptions opts (Record.get (Proxy :: Proxy l) rec)) obj
 
 class GenericDecode a where
   decodeOpts :: Options -> Foreign -> F a
@@ -298,7 +298,7 @@ instance genericDecodeConstructor
                            (index f contentsFieldName >>= readArguments)
                  pure (Constructor args)
     where
-      ctorName = reflectSymbol (SProxy :: SProxy name)
+      ctorName = reflectSymbol (Proxy :: Proxy name)
 
       numArgs = countArgs (Proxy :: Proxy rep)
 
@@ -328,7 +328,7 @@ instance genericEncodeConstructor
                  unsafeToForeign (Object.singleton tagFieldName (unsafeToForeign $ constructorTagTransform ctorName)
                            `Object.union` maybe Object.empty (Object.singleton contentsFieldName) (encodeArgsArray args))
     where
-      ctorName = reflectSymbol (SProxy :: SProxy name)
+      ctorName = reflectSymbol (Proxy :: Proxy name)
 
       encodeArgsArray :: rep -> Maybe Foreign
       encodeArgsArray = unwrapArguments <<< List.toUnfoldable <<< encodeArgs opts
