@@ -236,7 +236,7 @@ instance decodeRecordCons
     => DecodeRecord r (Cons l a rl_)
   where
     decodeRecordWithOptions _ opts f = do
-      builder <- decodeRecordWithOptions (RLProxy :: RLProxy rl_) opts f
+      builder <- decodeRecordWithOptions (Proxy :: Proxy rl_) opts f
       let l = reflectSymbol (Proxy :: Proxy l)
           l_transformed = (opts.fieldTransform l)
       f_ <- index f l_transformed
@@ -252,7 +252,7 @@ instance encodeRecordCons
     => EncodeRecord r (Cons l a rl_)
   where
     encodeRecordWithOptions _ opts rec =
-      let obj = encodeRecordWithOptions (RLProxy :: RLProxy rl_) opts (unsafeCoerce rec)
+      let obj = encodeRecordWithOptions (Proxy :: Proxy rl_) opts (unsafeCoerce rec)
           l = reflectSymbol (Proxy :: Proxy l)
        in Object.insert (opts.fieldTransform l) (encodeWithOptions opts (Record.get (Proxy :: Proxy l) rec)) obj
 

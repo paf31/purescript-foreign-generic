@@ -4,7 +4,7 @@ import Prelude
 
 import Control.Alt ((<|>))
 import Data.Generic.Rep (class Generic, Argument, Constructor(..), NoArguments(..), Product, Sum(..), from, to)
-import Data.Symbol (class IsSymbol, Proxy(..), reflectSymbol)
+import Data.Symbol (class IsSymbol, reflectSymbol)
 import Foreign (F, Foreign, ForeignError(..), fail, readString, unsafeToForeign)
 import Partial.Unsafe (unsafeCrashWith)
 import Prim.TypeError (class Fail, Text)
