@@ -217,7 +217,7 @@ else instance encodeWithOptionsOther :: Encode a => EncodeWithOptions a where
 class DecodeRecord r rl | rl -> r where
   decodeRecordWithOptions :: Proxy rl -> Options -> Foreign -> F (Builder {} (Record r))
 
-class EncodeRecord r rl | rl -> r where
+class EncodeRecord r (rl :: RowList Type) | rl -> r where
   encodeRecordWithOptions :: Proxy rl -> Options -> Record r -> Object Foreign
 
 instance decodeRecordNil :: DecodeRecord () Nil where
