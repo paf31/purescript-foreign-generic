@@ -22,7 +22,7 @@ import Foreign.NullOrUndefined (readNullOrUndefined, null)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import Prim.Row (class Cons, class Lacks)
-import Prim.RowList (class RowToList, Nil, Cons)
+import Prim.RowList (class RowToList, RowList, Nil, Cons)
 import Record as Record
 import Record.Builder (Builder)
 import Record.Builder as Builder
