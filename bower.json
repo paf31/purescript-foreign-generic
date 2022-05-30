@@ -15,16 +15,16 @@
     "url": "git://github.com/paf31/purescript-foreign-generic.git"
   },
   "dependencies": {
-    "purescript-effect": "^3.0.0",
-    "purescript-foreign": "^6.0.0",
-    "purescript-foreign-object": "^3.0.0",
-    "purescript-ordered-collections": "^2.0.0",
-    "purescript-exceptions": "^5.0.0",
-    "purescript-record": "^3.0.0",
-    "purescript-identity": "^5.0.0"
+    "purescript-effect": "^4.0.0",
+    "purescript-foreign": "^7.0.0",
+    "purescript-foreign-object": "^4.0.0",
+    "purescript-ordered-collections": "^3.0.0",
+    "purescript-exceptions": "^6.0.0",
+    "purescript-record": "^4.0.0",
+    "purescript-identity": "^6.0.0"
   },
   "devDependencies": {
-    "purescript-assert": "^5.0.0",
-    "purescript-psci-support": "^5.0.0"
+    "purescript-assert": "^6.0.0",
+    "purescript-psci-support": "^6.0.0"
   }
 }
