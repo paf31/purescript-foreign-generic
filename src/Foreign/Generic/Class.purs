@@ -275,7 +275,7 @@ class GenericCountArgs a where
   countArgs :: Proxy a -> Either a Int
 
 instance genericDecodeNoConstructors :: GenericDecode NoConstructors where
-  decodeOpts opts _ = fail (ForeignError "No constructors")
+  decodeOpts _ _ = fail (ForeignError "No constructors")
 
 instance genericEncodeNoConstructors :: GenericEncode NoConstructors where
   encodeOpts opts a = encodeOpts opts a
@@ -288,7 +288,7 @@ instance genericDecodeConstructor
         then Constructor <$> readArguments f
         else case opts.sumEncoding of
                TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } -> do
-                 tag <- mapExcept (lmap (map (ErrorAtProperty tagFieldName))) do
+                 _ <- mapExcept (lmap (map (ErrorAtProperty tagFieldName))) do
                    tag <- index f tagFieldName >>= readString
                    let expected = constructorTagTransform ctorName
                    unless (tag == expected) $
