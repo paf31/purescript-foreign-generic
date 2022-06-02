@@ -1,5 +1,5 @@
 "use strict";
 
-exports.parseJSONImpl = function (str) {
+export function parseJSONImpl(str) {
   return JSON.parse(str);
-};
+}
