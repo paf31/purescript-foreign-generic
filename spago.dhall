@@ -12,18 +12,29 @@ to generate this file without the comments in this block.
 -}
 { name = "foreign-generic"
 , dependencies =
-  [ "assert"
+  [ "arrays"
+  , "assert"
+  , "bifunctors"
   , "console"
+  , "control"
   , "effect"
+  , "either"
   , "exceptions"
+  , "foldable-traversable"
   , "foreign"
   , "foreign-object"
   , "identity"
-  , "ordered-collections"
+  , "lists"
+  , "maybe"
+  , "newtype"
+  , "partial"
   , "prelude"
-  , "psci-support"
   , "record"
+  , "strings"
+  , "transformers"
+  , "tuples"
   , "typelevel-prelude"
+  , "unsafe-coerce"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
