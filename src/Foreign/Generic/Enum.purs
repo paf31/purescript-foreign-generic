@@ -35,8 +35,8 @@ genericDecodeEnum opts = map to <<< decodeEnum opts
 -- |
 -- | ```purescript
 -- | data Fruit = Apple | Banana | Frikandel
--- | derive instance geFruit :: Generic Fruit _
--- | instance eFruit :: Encode Fruit where
+-- | derive instance Generic Fruit _
+-- | instance Encode Fruit where
 -- |   encode = genericEncodeEnum defaultGenericEnumOptions
 genericEncodeEnum
   :: forall a rep
@@ -53,8 +53,8 @@ genericEncodeEnum opts = encodeEnum opts <<< from
 -- |
 -- | ```purescript
 -- | data Fruit = Apple | Banana | Frikandel
--- | derive instance geFruit :: Generic Fruit _
--- | instance dFruit :: Decode Fruit where
+-- | derive instance Generic Fruit _
+-- | instance Decode Fruit where
 -- |   decode = genericDecodeEnum defaultGenericEnumOptions
 -- | ```
 class GenericDecodeEnum a where
@@ -64,13 +64,13 @@ class GenericDecodeEnum a where
 class GenericEncodeEnum a where
   encodeEnum :: GenericEnumOptions -> a -> Foreign
 
-instance sumGenericDecodeEnum
-  :: (GenericDecodeEnum a, GenericDecodeEnum b)
+instance
+  (GenericDecodeEnum a, GenericDecodeEnum b)
   => GenericDecodeEnum (Sum a b) where
   decodeEnum opts f = Inl <$> decodeEnum opts f <|> Inr <$> decodeEnum opts f
 
-instance ctorNoArgsGenericDecodeEnum
-  :: IsSymbol name
+instance
+  IsSymbol name
   => GenericDecodeEnum (Constructor name NoArguments) where
   decodeEnum {constructorTagTransform} f = do
     tag <- readString f
@@ -80,35 +80,35 @@ instance ctorNoArgsGenericDecodeEnum
     where
       ctorName = constructorTagTransform $ reflectSymbol (Proxy :: Proxy name)
 
-instance ctorArgumentGenericDecodeEnum
-  :: Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")
+instance
+  Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")
   => GenericDecodeEnum (Constructor name (Argument a)) where
   decodeEnum _ _ = unsafeCrashWith "unreachable decodeEnum was reached."
 
-instance ctorProductGenericDecodeEnum
-  :: Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")
+instance
+  Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")
   => GenericDecodeEnum (Constructor name (Product a b)) where
   decodeEnum _ _ = unsafeCrashWith "unreachable decodeEnum was reached."
 
-instance sumGenericEncodeEnum
-  :: (GenericEncodeEnum a, GenericEncodeEnum b)
+instance
+  (GenericEncodeEnum a, GenericEncodeEnum b)
   => GenericEncodeEnum (Sum a b) where
   encodeEnum opts (Inl a) = encodeEnum opts a
   encodeEnum opts (Inr b) = encodeEnum opts b
 
-instance ctorNoArgsGenericEncodeEnum
-  :: IsSymbol name
+instance
+  IsSymbol name
   => GenericEncodeEnum (Constructor name NoArguments) where
   encodeEnum {constructorTagTransform} _ = unsafeToForeign ctorName
     where
       ctorName = constructorTagTransform $ reflectSymbol (Proxy :: Proxy name)
 
-instance ctorArgumentGenericEncodeEnum
-  :: Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")
+instance
+  Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")
   => GenericEncodeEnum (Constructor name (Argument a)) where
   encodeEnum _ _ = unsafeCrashWith "unreachable encodeEnum was reached."
 
-instance ctorProductGenericEncodeEnum
-  :: Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")
+instance
+  Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")
   => GenericEncodeEnum (Constructor name (Product a b)) where
   encodeEnum _ _ = unsafeCrashWith "unreachable encodeEnum was reached."
