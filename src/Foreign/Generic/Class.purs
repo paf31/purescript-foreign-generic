@@ -13,7 +13,7 @@ import Data.List (List(..), (:))
 import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap)
-import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
+import Data.Symbol (class IsSymbol, reflectSymbol)
 import Data.Traversable (sequence)
 import Foreign (F, Foreign, ForeignError(..), fail, readArray, readBoolean, readChar, readInt, readNumber, readString, unsafeToForeign)
 import Foreign.Generic.Internal (readObject)
@@ -22,11 +22,10 @@ import Foreign.NullOrUndefined (readNullOrUndefined, null)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import Prim.Row (class Cons, class Lacks)
-import Prim.RowList (class RowToList, Nil, Cons)
+import Prim.RowList (class RowToList, RowList, Nil, Cons)
 import Record as Record
 import Record.Builder (Builder)
 import Record.Builder as Builder
-import Type.Data.RowList (RLProxy(..))
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -80,7 +79,7 @@ defaultOptions =
 -- |
 -- | data MyType = MyType ...
 -- |
--- | derive instance genericMyType :: Generic MyType _
+-- | derive instance Generic MyType _
 -- | ```
 -- |
 -- | You can then use the `genericDecode` and `genericDecodeJSON` functions
@@ -88,34 +87,34 @@ defaultOptions =
 class Decode a where
   decode :: Foreign -> F a
 
-instance voidDecode :: Decode Void where
+instance Decode Void where
   decode _ = except (Left (pure (ForeignError "Decode: void")))
 
-instance unitDecode :: Decode Unit where
+instance Decode Unit where
   decode _ = pure unit
 
-instance foreignDecode :: Decode Foreign where
+instance Decode Foreign where
   decode = pure
 
-instance stringDecode :: Decode String where
+instance Decode String where
   decode = readString
 
-instance charDecode :: Decode Char where
+instance Decode Char where
   decode = readChar
 
-instance booleanDecode :: Decode Boolean where
+instance Decode Boolean where
   decode = readBoolean
 
-instance numberDecode :: Decode Number where
+instance Decode Number where
   decode = readNumber
 
-instance intDecode :: Decode Int where
+instance Decode Int where
   decode = readInt
 
-instance identityDecode :: Decode a => Decode (Identity a) where
+instance Decode a => Decode (Identity a) where
   decode = map Identity <<< decode
 
-instance arrayDecode :: Decode a => Decode (Array a) where
+instance Decode a => Decode (Array a) where
   decode = readArray >=> readElements where
     readElements :: Array Foreign -> F (Array a)
     readElements arr = sequence (zipWith readElement (0 .. length arr) arr)
@@ -123,13 +122,13 @@ instance arrayDecode :: Decode a => Decode (Array a) where
     readElement :: Int -> Foreign -> F a
     readElement i value = mapExcept (lmap (map (ErrorAtIndex i))) (decode value)
 
-instance maybeDecode :: Decode a => Decode (Maybe a) where
+instance Decode a => Decode (Maybe a) where
   decode = readNullOrUndefined decode
 
-instance objectDecode :: Decode v => Decode (Object v) where
+instance Decode v => Decode (Object v) where
   decode = sequence <<< Object.mapWithKey (\_ -> decode) <=< readObject
 
-instance recordDecode :: (RowToList r rl, DecodeRecord r rl) => Decode (Record r) where
+instance (RowToList r rl, DecodeRecord r rl) => Decode (Record r) where
   decode = decodeWithOptions defaultOptions
 
 -- | The `Encode` class is used to generate encoding functions
@@ -142,7 +141,7 @@ instance recordDecode :: (RowToList r rl, DecodeRecord r rl) => Decode (Record r
 -- |
 -- | data MyType = MyType ...
 -- |
--- | derive instance genericMyType :: Generic MyType _
+-- | derive instance Generic MyType _
 -- | ```
 -- |
 -- | You can then use the `genericEncode` and `genericEncodeJSON` functions
@@ -150,43 +149,43 @@ instance recordDecode :: (RowToList r rl, DecodeRecord r rl) => Decode (Record r
 class Encode a where
   encode :: a -> Foreign
 
-instance voidEncode :: Encode Void where
+instance Encode Void where
   encode = absurd
 
-instance unitEncode :: Encode Unit where
+instance Encode Unit where
   encode _ = unsafeToForeign {}
 
-instance foreignEncode :: Encode Foreign where
+instance Encode Foreign where
   encode = identity
 
-instance stringEncode :: Encode String where
+instance Encode String where
   encode = unsafeToForeign
 
-instance charEncode :: Encode Char where
+instance Encode Char where
   encode = unsafeToForeign
 
-instance booleanEncode :: Encode Boolean where
+instance Encode Boolean where
   encode = unsafeToForeign
 
-instance numberEncode :: Encode Number where
+instance Encode Number where
   encode = unsafeToForeign
 
-instance intEncode :: Encode Int where
+instance Encode Int where
   encode = unsafeToForeign
 
-instance identityEncode :: Encode a => Encode (Identity a) where
+instance Encode a => Encode (Identity a) where
   encode = encode <<< unwrap
 
-instance arrayEncode :: Encode a => Encode (Array a) where
+instance Encode a => Encode (Array a) where
   encode = unsafeToForeign <<< map encode
 
-instance maybeEncode :: Encode a => Encode (Maybe a) where
+instance Encode a => Encode (Maybe a) where
   encode = maybe null encode
 
-instance objectEncode :: Encode v => Encode (Object v) where
+instance Encode v => Encode (Object v) where
   encode = unsafeToForeign <<< Object.mapWithKey (\_ -> encode)
 
-instance recordEncode :: (RowToList r rl, EncodeRecord r rl) => Encode (Record r) where
+instance (RowToList r rl, EncodeRecord r rl) => Encode (Record r) where
   encode = encodeWithOptions defaultOptions
 
 -- | When deriving `En`/`Decode` instances using `Generic`, we want
@@ -205,26 +204,26 @@ class DecodeWithOptions a where
 class EncodeWithOptions a where
   encodeWithOptions :: Options -> a -> Foreign
 
-instance decodeWithOptionsRecord :: (RowToList r rl, DecodeRecord r rl) => DecodeWithOptions (Record r) where
-  decodeWithOptions opts = map (flip Builder.build {}) <$> decodeRecordWithOptions (RLProxy :: RLProxy rl) opts
-else instance decodeWithOptionsOther :: Decode a => DecodeWithOptions a where
+instance (RowToList r rl, DecodeRecord r rl) => DecodeWithOptions (Record r) where
+  decodeWithOptions opts = map (flip Builder.build {}) <$> decodeRecordWithOptions (Proxy :: Proxy rl) opts
+else instance Decode a => DecodeWithOptions a where
   decodeWithOptions _ = decode
 
-instance encodeWithOptionsRecord :: (RowToList r rl, EncodeRecord r rl) => EncodeWithOptions (Record r) where
-  encodeWithOptions opts = unsafeToForeign <<< encodeRecordWithOptions (RLProxy :: RLProxy rl) opts
-else instance encodeWithOptionsOther :: Encode a => EncodeWithOptions a where
+instance (RowToList r rl, EncodeRecord r rl) => EncodeWithOptions (Record r) where
+  encodeWithOptions opts = unsafeToForeign <<< encodeRecordWithOptions (Proxy :: Proxy rl) opts
+else instance Encode a => EncodeWithOptions a where
   encodeWithOptions _ = encode
 
-class DecodeRecord r rl | rl -> r where
-  decodeRecordWithOptions :: RLProxy rl -> Options -> Foreign -> F (Builder {} (Record r))
+class DecodeRecord r (rl :: RowList Type) | rl -> r where
+  decodeRecordWithOptions :: Proxy rl -> Options -> Foreign -> F (Builder {} (Record r))
 
-class EncodeRecord r rl | rl -> r where
-  encodeRecordWithOptions :: RLProxy rl -> Options -> Record r -> Object Foreign
+class EncodeRecord r (rl :: RowList Type) | rl -> r where
+  encodeRecordWithOptions :: Proxy rl -> Options -> Record r -> Object Foreign
 
-instance decodeRecordNil :: DecodeRecord () Nil where
+instance DecodeRecord () Nil where
   decodeRecordWithOptions _ _ _ = pure identity
 
-instance encodeRecordNil :: EncodeRecord () Nil where
+instance EncodeRecord () Nil where
   encodeRecordWithOptions _ _ _ = Object.empty
 
 instance decodeRecordCons
@@ -237,12 +236,12 @@ instance decodeRecordCons
     => DecodeRecord r (Cons l a rl_)
   where
     decodeRecordWithOptions _ opts f = do
-      builder <- decodeRecordWithOptions (RLProxy :: RLProxy rl_) opts f
-      let l = reflectSymbol (SProxy :: SProxy l)
+      builder <- decodeRecordWithOptions (Proxy :: Proxy rl_) opts f
+      let l = reflectSymbol (Proxy :: Proxy l)
           l_transformed = (opts.fieldTransform l)
       f_ <- index f l_transformed
       a <- mapExcept (lmap (map (ErrorAtProperty l_transformed))) (decodeWithOptions opts f_)
-      pure (builder >>> Builder.insert (SProxy :: SProxy l) a)
+      pure (builder >>> Builder.insert (Proxy :: Proxy l) a)
 
 instance encodeRecordCons
     :: ( Cons l a r_ r
@@ -253,9 +252,9 @@ instance encodeRecordCons
     => EncodeRecord r (Cons l a rl_)
   where
     encodeRecordWithOptions _ opts rec =
-      let obj = encodeRecordWithOptions (RLProxy :: RLProxy rl_) opts (unsafeCoerce rec)
-          l = reflectSymbol (SProxy :: SProxy l)
-       in Object.insert (opts.fieldTransform l) (encodeWithOptions opts (Record.get (SProxy :: SProxy l) rec)) obj
+      let obj = encodeRecordWithOptions (Proxy :: Proxy rl_) opts (unsafeCoerce rec)
+          l = reflectSymbol (Proxy :: Proxy l)
+       in Object.insert (opts.fieldTransform l) (encodeWithOptions opts (Record.get (Proxy :: Proxy l) rec)) obj
 
 class GenericDecode a where
   decodeOpts :: Options -> Foreign -> F a
@@ -275,21 +274,21 @@ class GenericEncodeArgs a where
 class GenericCountArgs a where
   countArgs :: Proxy a -> Either a Int
 
-instance genericDecodeNoConstructors :: GenericDecode NoConstructors where
-  decodeOpts opts _ = fail (ForeignError "No constructors")
+instance GenericDecode NoConstructors where
+  decodeOpts _ _ = fail (ForeignError "No constructors")
 
-instance genericEncodeNoConstructors :: GenericEncode NoConstructors where
+instance GenericEncode NoConstructors where
   encodeOpts opts a = encodeOpts opts a
 
-instance genericDecodeConstructor
-  :: (IsSymbol name, GenericDecodeArgs rep, GenericCountArgs rep)
+instance
+  (IsSymbol name, GenericDecodeArgs rep, GenericCountArgs rep)
   => GenericDecode (Constructor name rep) where
   decodeOpts opts f =
       if opts.unwrapSingleConstructors
         then Constructor <$> readArguments f
         else case opts.sumEncoding of
                TaggedObject { tagFieldName, contentsFieldName, constructorTagTransform } -> do
-                 tag <- mapExcept (lmap (map (ErrorAtProperty tagFieldName))) do
+                 _ <- mapExcept (lmap (map (ErrorAtProperty tagFieldName))) do
                    tag <- index f tagFieldName >>= readString
                    let expected = constructorTagTransform ctorName
                    unless (tag == expected) $
@@ -299,7 +298,7 @@ instance genericDecodeConstructor
                            (index f contentsFieldName >>= readArguments)
                  pure (Constructor args)
     where
-      ctorName = reflectSymbol (SProxy :: SProxy name)
+      ctorName = reflectSymbol (Proxy :: Proxy name)
 
       numArgs = countArgs (Proxy :: Proxy rep)
 
@@ -318,8 +317,8 @@ instance genericDecodeConstructor
               fail (ForeignError ("Expected " <> show n <> " constructor arguments"))
             pure result
 
-instance genericEncodeConstructor
-  :: (IsSymbol name, GenericEncodeArgs rep)
+instance
+  (IsSymbol name, GenericEncodeArgs rep)
   => GenericEncode (Constructor name rep) where
   encodeOpts opts (Constructor args) =
       if opts.unwrapSingleConstructors
@@ -329,7 +328,7 @@ instance genericEncodeConstructor
                  unsafeToForeign (Object.singleton tagFieldName (unsafeToForeign $ constructorTagTransform ctorName)
                            `Object.union` maybe Object.empty (Object.singleton contentsFieldName) (encodeArgsArray args))
     where
-      ctorName = reflectSymbol (SProxy :: SProxy name)
+      ctorName = reflectSymbol (Proxy :: Proxy name)
 
       encodeArgsArray :: rep -> Maybe Foreign
       encodeArgsArray = unwrapArguments <<< List.toUnfoldable <<< encodeArgs opts
@@ -339,8 +338,8 @@ instance genericEncodeConstructor
       unwrapArguments [x] | opts.unwrapSingleArguments = Just x
       unwrapArguments xs = Just (unsafeToForeign xs)
 
-instance genericDecodeSum
-  :: (GenericDecode a, GenericDecode b)
+instance
+  (GenericDecode a, GenericDecode b)
   => GenericDecode (Sum a b) where
   decodeOpts opts f = Inl <$> decodeOpts opts' f <|> Inr <$> decodeOpts opts' f
     where
@@ -348,53 +347,53 @@ instance genericDecodeSum
       -- constructor at this point anyway.
       opts' = opts { unwrapSingleConstructors = false }
 
-instance genericEncodeSum
-  :: (GenericEncode a, GenericEncode b)
+instance
+  (GenericEncode a, GenericEncode b)
   => GenericEncode (Sum a b) where
   encodeOpts opts (Inl a) = encodeOpts (opts { unwrapSingleConstructors = false }) a
   encodeOpts opts (Inr b) = encodeOpts (opts { unwrapSingleConstructors = false }) b
 
-instance genericDecodeArgsNoArguments :: GenericDecodeArgs NoArguments where
+instance GenericDecodeArgs NoArguments where
   decodeArgs _ i Nil = pure { result: NoArguments, rest: Nil, next: i }
   decodeArgs _ _ _ = fail (ForeignError "Too many constructor arguments")
 
-instance genericEncodeArgsNoArguments :: GenericEncodeArgs NoArguments where
+instance GenericEncodeArgs NoArguments where
   encodeArgs _ = mempty
 
-instance genericDecodeArgsArgument
-  :: DecodeWithOptions a
+instance
+  DecodeWithOptions a
   => GenericDecodeArgs (Argument a) where
   decodeArgs opts i (x : xs) = do
     a <- mapExcept (lmap (map (ErrorAtIndex i))) (decodeWithOptions opts x)
     pure { result: Argument a, rest: xs, next: i + 1 }
   decodeArgs _ _ _ = fail (ForeignError "Not enough constructor arguments")
 
-instance genericEncodeArgsArgument
-  :: EncodeWithOptions a
+instance
+  EncodeWithOptions a
   => GenericEncodeArgs (Argument a) where
   encodeArgs opts (Argument a) = List.singleton (encodeWithOptions opts a)
 
-instance genericDecodeArgsProduct
-  :: (GenericDecodeArgs a, GenericDecodeArgs b)
+instance
+  (GenericDecodeArgs a, GenericDecodeArgs b)
   => GenericDecodeArgs (Product a b) where
   decodeArgs opts i xs = do
     { result: resA, rest: xs1, next: i1 } <- decodeArgs opts i xs
     { result: resB, rest, next } <- decodeArgs opts i1 xs1
     pure { result: Product resA resB, rest, next }
 
-instance genericEncodeArgsProduct
-  :: (GenericEncodeArgs a, GenericEncodeArgs b)
+instance
+  (GenericEncodeArgs a, GenericEncodeArgs b)
   => GenericEncodeArgs (Product a b) where
   encodeArgs opts (Product a b) = encodeArgs opts a <> encodeArgs opts b
 
-instance genericCountArgsNoArguments :: GenericCountArgs NoArguments where
+instance GenericCountArgs NoArguments where
   countArgs _ = Left NoArguments
 
-instance genericCountArgsArgument :: GenericCountArgs (Argument a) where
+instance GenericCountArgs (Argument a) where
   countArgs _ = Right 1
 
-instance genericCountArgsProduct
-  :: (GenericCountArgs a, GenericCountArgs b)
+instance
+  (GenericCountArgs a, GenericCountArgs b)
   => GenericCountArgs (Product a b) where
   countArgs _ =
     case countArgs (Proxy :: Proxy a), countArgs (Proxy :: Proxy b) of

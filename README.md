@@ -18,8 +18,8 @@ First, define some data type and derive `Generic`:
 > import Data.Show.Generic (genericShow)
 
 > newtype MyRecord = MyRecord { a :: Int }
-> derive instance genericMyRecord :: Generic MyRecord _
-> instance showMyRecord :: Show MyRecord where show = genericShow
+> derive instance Generic MyRecord _
+> instance Show MyRecord where show = genericShow
 ```
 
 To encode JSON, use `genericEncodeJSON`:

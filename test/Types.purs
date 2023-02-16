@@ -3,35 +3,36 @@ module Test.Types where
 import Prelude
 
 import Data.Bifunctor (class Bifunctor)
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
+import Data.Maybe (Maybe)
+import Data.Show.Generic (genericShow)
+import Data.Tuple (Tuple(..))
 import Foreign (ForeignError(..), fail, readArray, unsafeToForeign)
 import Foreign.Generic (class Encode, class Decode, Options, SumEncoding(..), encode, decode, defaultOptions, genericDecode, genericEncode)
+import Foreign.Generic.Class (class DecodeWithOptions, class EncodeWithOptions)
 import Foreign.Generic.EnumEncoding (defaultGenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
-import Data.Generic.Rep (class Generic)
-import Data.Eq.Generic (genericEq)
-import Data.Show.Generic (genericShow)
-import Data.Maybe (Maybe)
-import Data.Tuple (Tuple(..))
 
 newtype TupleArray a b = TupleArray (Tuple a b)
 
-derive newtype instance bifunctorTupleArray :: Bifunctor TupleArray
+derive newtype instance Bifunctor TupleArray
 
-derive instance genericTupleArray :: Generic (TupleArray a b) _
+derive instance Generic (TupleArray a b) _
 
-instance showTupleArray :: (Show a, Show b) => Show (TupleArray a b) where
+instance (Show a, Show b) => Show (TupleArray a b) where
   show x = genericShow x
 
-instance eqTupleArray :: (Eq a, Eq b) => Eq (TupleArray a b) where
+instance (Eq a, Eq b) => Eq (TupleArray a b) where
   eq x y = genericEq x y
 
-instance decodeTupleArray :: (Decode a, Decode b) => Decode (TupleArray a b) where
+instance (Decode a, Decode b) => Decode (TupleArray a b) where
   decode x = do
     arr <- readArray x
     case arr of
       [y, z] -> TupleArray <$> (Tuple <$> decode y <*> decode z)
       _ -> fail (ForeignError "Expected two array elements")
 
-instance encodeTupleArray :: (Encode a, Encode b) => Encode (TupleArray a b) where
+instance (Encode a, Encode b) => Encode (TupleArray a b) where
   encode (TupleArray (Tuple a b)) = unsafeToForeign [encode a, encode b]
 
 -- | An example record
@@ -41,29 +42,29 @@ newtype RecordTest = RecordTest
   , baz :: Char
   }
 
-derive instance genericRecordTest :: Generic RecordTest _
+derive instance Generic RecordTest _
 
-instance showRecordTest :: Show RecordTest where
+instance Show RecordTest where
   show x = genericShow x
 
-instance eqRecordTest :: Eq RecordTest where
+instance Eq RecordTest where
   eq x y = genericEq x y
 
-instance decodeRecordTest :: Decode RecordTest where
+instance Decode RecordTest where
   decode x = genericDecode (defaultOptions { unwrapSingleConstructors = true }) x
 
-instance encodeRecordTest :: Encode RecordTest where
+instance Encode RecordTest where
   encode x = genericEncode (defaultOptions { unwrapSingleConstructors = true }) x
 
 -- | An example of an ADT with nullary constructors
 data IntList = Nil | Cons Int IntList
 
-derive instance genericIntList :: Generic IntList _
+derive instance Generic IntList _
 
-instance showIntList :: Show IntList where
+instance Show IntList where
   show x = genericShow x
 
-instance eqIntList :: Eq IntList where
+instance Eq IntList where
   eq x y = genericEq x y
 
 intListOptions :: Options
@@ -77,39 +78,39 @@ intListOptions =
                                                }
                  }
 
-instance decodeIntList :: Decode IntList where
+instance Decode IntList where
   decode x = genericDecode intListOptions x
 
-instance encodeIntList :: Encode IntList where
+instance Encode IntList where
   encode x = genericEncode intListOptions x
 
 -- | Balanced binary leaf trees
 data Tree a = Leaf a | Branch (Tree (TupleArray a a))
 
-derive instance genericTree :: Generic (Tree a) _
+derive instance Generic (Tree a) _
 
-instance showTree :: Show a => Show (Tree a) where
+instance Show a => Show (Tree a) where
   show x = genericShow x
 
-instance eqTree :: Eq a => Eq (Tree a) where
+instance Eq a => Eq (Tree a) where
   eq x y = genericEq x y
 
-instance decodeTree :: Decode a => Decode (Tree a) where
+instance (DecodeWithOptions a, Decode a) => Decode (Tree a) where
   decode x = genericDecode defaultOptions x
 
-instance encodeTree :: Encode a => Encode (Tree a) where
+instance (Encode a, EncodeWithOptions a) => Encode (Tree a) where
   encode x = genericEncode defaultOptions x
 
 newtype UndefinedTest = UndefinedTest
   { a :: Maybe String
   }
 
-derive instance eqUT :: Eq UndefinedTest
-derive instance geUT :: Generic UndefinedTest _
+derive instance Eq UndefinedTest
+derive instance Generic UndefinedTest _
 
-instance dUT :: Decode UndefinedTest where
+instance Decode UndefinedTest where
   decode = genericDecode $ defaultOptions
-instance eUT :: Encode UndefinedTest where
+instance Encode UndefinedTest where
   encode = genericEncode $ defaultOptions
 
 data Fruit
@@ -117,10 +118,10 @@ data Fruit
   | Banana
   | Frikandel
 
-derive instance eqFruit :: Eq Fruit
-derive instance geFruit :: Generic Fruit _
+derive instance Eq Fruit
+derive instance Generic Fruit _
 
-instance dFruit :: Decode Fruit where
+instance Decode Fruit where
   decode = genericDecodeEnum defaultGenericEnumOptions
-instance eFruit :: Encode Fruit where
+instance Encode Fruit where
   encode = genericEncodeEnum defaultGenericEnumOptions
